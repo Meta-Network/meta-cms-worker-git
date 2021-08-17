@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ClientsModule } from '@nestjs/microservices';
+import { WinstonModule } from 'nest-winston';
+import { configBuilder } from 'src/configs';
+import { CMSBackendMicroserviceClientService } from 'src/configs/cms';
+import { WinstonConfigService } from 'src/configs/winston';
+
 import { AppController } from './controller';
 import { AppService } from './service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { configBuilder } from 'src/configs';
-import { WinstonModule } from 'nest-winston';
-import { WinstonConfigService } from 'src/configs/winston';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
@@ -17,8 +19,12 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
       inject: [ConfigService],
       useClass: WinstonConfigService,
     }),
-    ClientsModule.register([
-      { name: 'CMS_BACKEND_SERVICE', transport: Transport.TCP },
+    ClientsModule.registerAsync([
+      {
+        name: 'CMS_BACKEND_SERVICE',
+        inject: [ConfigService],
+        useClass: CMSBackendMicroserviceClientService,
+      },
     ]),
   ],
   controllers: [AppController],
