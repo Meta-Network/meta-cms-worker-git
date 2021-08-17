@@ -11,14 +11,15 @@ const defaultLogFormat = (appName: string) =>
     winston.format.label({ label: appName }),
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.metadata({
-      fillExcept: ['message', 'level', 'timestamp', 'label'],
+      fillExcept: ['message', 'level', 'timestamp', 'label', 'stack'],
     }),
   );
 const consoleLogFormat = winston.format.printf((info) => {
+  const { label, timestamp, level, stack, message, ms } = info;
   const ctx = info.metadata.context;
-  const msg = info.message;
-  const ms = info.ms;
-  return `\x1B[32m[${info.label}]  -\x1B[39m ${info.timestamp}     ${info.level} \x1B[33m[${ctx}]\x1B[39m ${msg} \x1B[33m${ms}\x1B[39m`;
+  return `\x1B[32m[${label}]  -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message}${
+    stack ? ' \x1B[31m' + stack + '\x1B[39m' : ''
+  } \x1B[33m${ms}\x1B[39m`;
 });
 
 @Injectable()
@@ -39,6 +40,7 @@ export class WinstonConfigService implements WinstonModuleOptionsFactory {
             winston.format.colorize({ all: true }),
             winston.format.timestamp({ format: 'MM/DD/YYYY, hh:mm:ss A' }),
             winston.format.ms(),
+            winston.format.errors({ stack: true }),
             consoleLogFormat,
           ),
         }),
