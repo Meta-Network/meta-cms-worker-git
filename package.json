@@ -85,5 +85,8 @@
   },
   "lint-staged": {
     "*.{js,ts}": "eslint --cache --fix"
+  },
+  "engines": {
+    "node": ">=14 <15"
   }
 }
