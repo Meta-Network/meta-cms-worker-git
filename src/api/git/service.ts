@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs-extra';
 import * as os from 'os';
@@ -74,7 +74,7 @@ class GitInstance {
 }
 
 @Injectable()
-export class GitService {
+export class GitService implements OnApplicationShutdown {
   constructor(
     private readonly logger: LoggerService,
     private readonly config: ConfigService,
@@ -128,7 +128,8 @@ export class GitService {
       );
       this.instance = new GitInstance(this.logger, { baseDir: baseDir });
     } catch (error) {
-      this.logger.error('Create git base dir faild:', error);
+      this.logger.error('Create git base dir failed:', error);
+      process.exit(1);
     }
   }
 
@@ -170,16 +171,14 @@ export class GitService {
         `Repo ${gitReponame} has remote ${_remote}`,
         GitService.name,
       );
-      if (typeof _remote !== 'string')
-        throw new ReferenceError(
-          `Repo ${gitReponame} does not have any remote`,
+      if (_remote && typeof _remote === 'string') {
+        const oldRemote = removeControlCharacters(_remote);
+        await localGit.removeRemote(removeControlCharacters(oldRemote));
+        this.logger.verbose(
+          `Remove remote ${oldRemote} successful`,
+          GitService.name,
         );
-      const oldRemote = removeControlCharacters(_remote);
-      await localGit.removeRemote(removeControlCharacters(oldRemote));
-      this.logger.verbose(
-        `Remove remote ${oldRemote} successful`,
-        GitService.name,
-      );
+      }
       // Add new remote
       const { remoteUrl, originUrl } = await this.buildRemoteHttpUrlWithToken(
         gitType,
@@ -190,9 +189,9 @@ export class GitService {
       await localGit.addRemote('origin', remoteUrl);
       this.logger.verbose(`Add new remote, name: origin`, GitService.name);
       // Change branch name
-      const branch = await localGit.checkout(['-b', gitBranchName]);
+      const branch = await localGit.branch(['-m', gitBranchName]);
       this.logger.verbose(
-        `Create and checkout with branch name: ${gitBranchName}, output: ${branch}`,
+        `Branch renamed to ${gitBranchName}, output: ${branch}`,
         GitService.name,
       );
       // Push to remote
@@ -210,7 +209,12 @@ export class GitService {
         GitService.name,
       );
     } catch (error) {
-      this.logger.error('Create repo from template faild:', error);
+      this.logger.error('Create repo from template failed:', error);
+      process.exit(1);
     }
+  }
+
+  onApplicationShutdown(signal: string): void {
+    console.log('App shutdown', signal);
   }
 }
