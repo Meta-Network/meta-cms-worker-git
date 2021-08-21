@@ -1,31 +1,33 @@
-import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import cron from 'cron';
+import timer from 'timers';
 
-import { AppModule } from './api/app/module';
+import { logger, loggerService } from './logger';
+import { startGitTask } from './task';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get<ConfigService>(ConfigService);
-  const appPort = configService.get<number>('app.port', 3001);
-  const enableSwagger = configService.get<boolean>('swagger.enable');
+async function bootstrap(): Promise<void> {
+  logger.info('App started');
 
-  if (enableSwagger) {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle(configService.get<string>('app.name'))
-      .setDescription('CMS Worker for Git')
-      .setVersion(process.env.npm_package_version || '0.0.1')
-      .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api', app, document, {
-      customCss: '.swagger-ui tr { display: block; padding: 10px 0; }',
-    });
-  }
+  const gitTask = timer
+    .setTimeout(async () => {
+      await startGitTask();
+    }, 3000)
+    .unref();
 
-  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  app.enableShutdownHooks();
+  const healthCheck = new cron.CronJob('*/60 * * * * *', async () => {
+    logger.info('Health check');
+  });
 
-  await app.listen(appPort);
+  healthCheck.start();
+
+  process.on('uncaughtException', (error) => {
+    loggerService.final(error);
+    timer.clearTimeout(gitTask);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    loggerService.final(reason as Error, 'unhandledRejection');
+    timer.clearTimeout(gitTask);
+  });
 }
+
 bootstrap();
