@@ -1,6 +1,15 @@
 app:
-  name: MetaCMSWorker
+  name: MetaCMSWorkerGit
   port: 3001
 
-swagger:
-  enable: false
+logger:
+  prettyPrint:
+    colorize: true
+    levelFirst: true
+    translateTime: mm/dd/yy hh:mm:ss TT
+
+git:
+  baseDirName: worker-git-data
+
+sevenZip:
+  binName: 7zz

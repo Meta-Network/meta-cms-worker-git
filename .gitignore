@@ -2,9 +2,9 @@
 *.http
 
 # ENV File
-.env.*
-config.*
-!config.example.*
+/.env.*
+/config.*
+!/config.example.*
 
 # Caches
 .eslintcache
