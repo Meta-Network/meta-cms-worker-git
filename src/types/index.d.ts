@@ -48,3 +48,9 @@ export type TaskConfig = TaskInfo &
   CMSSiteConfig &
   TemplateInfo &
   GitInfo;
+
+export type DownloadRepositoryArchiveReturn = {
+  filePath: string;
+  fileName: string;
+  rawFileName: string;
+};
