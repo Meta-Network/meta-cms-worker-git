@@ -1,0 +1,44 @@
+import { Octokit } from '@octokit/core';
+import fs from 'fs/promises';
+import { logger } from 'src/logger';
+import { DownloadRepositoryArchiveReturn } from 'src/types';
+
+export class GitHubService {
+  constructor(private readonly tmpDir: string) {
+    this.octokit = new Octokit();
+  }
+
+  private readonly octokit: Octokit;
+
+  async downloadRepositoryArchive(
+    owner: string,
+    repo: string,
+    ref?: string,
+  ): Promise<DownloadRepositoryArchiveReturn> {
+    let req = 'GET /repos/{owner}/{repo}/zipball';
+    if (ref) req = req.concat('/{ref}');
+
+    const _res = await this.octokit.request(req, {
+      owner,
+      repo,
+      ref,
+    });
+
+    const disposition =
+      _res.headers['Content-Disposition'] ||
+      _res.headers['content-disposition'];
+    const rawFileName = (disposition as string).replace(
+      'attachment; filename=',
+      '',
+    );
+
+    logger.info(`Downloading file from ${_res.url}`);
+
+    const fileName = 'template.zip';
+    const filePath = `${this.tmpDir}/${fileName}`;
+    await fs.writeFile(filePath, Buffer.from(_res.data));
+    logger.info(`File ${filePath} download complete`);
+
+    return { fileName, filePath, rawFileName };
+  }
+}
