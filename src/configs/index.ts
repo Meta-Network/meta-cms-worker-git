@@ -3,9 +3,10 @@ import get from 'lodash.get';
 import has from 'lodash.has';
 import set from 'lodash.set';
 import path from 'path';
-import { NoInferType, Path, PathValue } from 'src/types/config';
-import { isProd, isUndefined } from 'src/utils';
 import yaml from 'yaml';
+
+import { NoInferType, Path, PathValue } from '../types/config';
+import { isProd, isUndefined } from '../utils';
 
 const YAML_CONFIG_FILENAME = isProd() ? 'config.prod.yaml' : 'config.dev.yaml';
 

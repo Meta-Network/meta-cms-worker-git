@@ -1,7 +1,8 @@
 import { Octokit } from '@octokit/core';
 import fs from 'fs/promises';
-import { logger } from 'src/logger';
-import { DownloadRepositoryArchiveReturn } from 'src/types';
+
+import { logger } from '../logger';
+import { DownloadRepositoryArchiveReturn } from '../types';
 
 export class GitHubService {
   constructor(private readonly tmpDir: string) {

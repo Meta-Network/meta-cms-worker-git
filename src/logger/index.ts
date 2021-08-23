@@ -3,8 +3,9 @@ import os from 'os';
 import path from 'path';
 import pino, { P } from 'pino';
 import process from 'process';
-import { config } from 'src/configs';
-import { isProd } from 'src/utils';
+
+import { config } from '../configs';
+import { isProd } from '../utils';
 
 type DestinationOptions = {
   destination: string | number;

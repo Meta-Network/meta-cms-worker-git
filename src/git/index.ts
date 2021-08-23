@@ -4,11 +4,11 @@ import fse from 'fs-extra';
 import Git, { Repository, Signature } from 'nodegit';
 import os from 'os';
 import path from 'path';
-import { config } from 'src/configs';
-import { logger } from 'src/logger';
-import { DownloadRepositoryArchiveReturn, TaskConfig } from 'src/types';
-import { GitServiceType } from 'src/types/enum';
 
+import { config } from '../configs';
+import { logger } from '../logger';
+import { DownloadRepositoryArchiveReturn, TaskConfig } from '../types';
+import { GitServiceType } from '../types/enum';
 import { GitHubService } from './github';
 import { ZipArchiveService } from './zip';
 

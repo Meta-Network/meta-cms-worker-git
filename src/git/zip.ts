@@ -1,7 +1,8 @@
 import SevenZip from 'node-7z';
-import { config } from 'src/configs';
-import { logger } from 'src/logger';
 import which from 'which';
+
+import { config } from '../configs';
+import { logger } from '../logger';
 
 export class ZipArchiveService {
   constructor() {

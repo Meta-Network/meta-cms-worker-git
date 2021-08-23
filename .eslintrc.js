@@ -29,11 +29,4 @@ module.exports = {
     'import/first': 'error',
     'import/no-duplicates': 'error',
   },
-  'settings': {
-    'import/resolver': {
-      'node': {
-        'paths': ['./']
-      }
-    },
-  },
 };

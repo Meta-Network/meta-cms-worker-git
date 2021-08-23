@@ -1,7 +1,7 @@
-import { GitService } from 'src/git';
-import { logger, loggerService } from 'src/logger';
-import { TaskConfig } from 'src/types';
-import { GitServiceType, TaskMethod } from 'src/types/enum';
+import { GitService } from '../git';
+import { logger, loggerService } from '../logger';
+import { TaskConfig } from '../types';
+import { GitServiceType, TaskMethod } from '../types/enum';
 
 export const startGitTask = async (): Promise<void> => {
   logger.info('Getting new Git task from gateway');
