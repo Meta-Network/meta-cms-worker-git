@@ -9,7 +9,8 @@
     "allowSyntheticDefaultImports": true,
     "target": "esnext",
     "sourceMap": true,
-    "outDir": "./dist",
+    "outDir": "dist",
+    "baseUrl": "src",
     "incremental": true
   },
   "ts-node": {

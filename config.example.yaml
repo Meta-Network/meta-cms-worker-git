@@ -13,3 +13,7 @@ git:
 
 sevenZip:
   binName: 7zz
+
+backend:
+  host:
+  port:
