@@ -28,9 +28,10 @@ class LoggerService {
       if (process.env.DEBUG)
         console.log('\x1B[35merrorConsoleFormat:info:\x1B[39m', info);
       const { metadata, label, timestamp, level, message } = info;
+      const host = metadata?.host ? `:${metadata.host}` : '';
       const pid = metadata?.runtime?.pid || 'null';
       const ctx = metadata?.context;
-      return `\x1B[32m[${label}] ${pid} -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message}`;
+      return `\x1B[32m[${label}${host}] ${pid} -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message}`;
     });
 
     const transports: transport[] = [
@@ -68,10 +69,11 @@ class LoggerService {
       level,
       format: defaultWinstonFormat,
       defaultMeta: {
+        host: config.get<string>('HOSTNAME', ''),
         runtime: {
           pid: process.pid,
           platform: process.platform,
-          versions: { ...process.versions },
+          versions: process.versions,
         },
         context: 'main',
       },
@@ -83,11 +85,12 @@ class LoggerService {
       if (process.env.DEBUG)
         console.log('\x1B[35mdebugConsoleFormat:info:\x1B[39m', info);
       const { metadata, label, timestamp, level, message } = info;
+      const host = metadata?.host ? `:${metadata.host}` : '';
       const pid = metadata?.runtime?.pid || 'null';
       const ctx = metadata?.context;
-      const ms = metadata?.ms || '-ms';
+      const ms = metadata?.ms || '';
       const stack = metadata?.stack;
-      return `\x1B[32m[${label}] ${pid} -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message} \x1B[33m${ms}\x1B[39m${
+      return `\x1B[32m[${label}${host}] ${pid} -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message} \x1B[33m${ms}\x1B[39m${
         stack ? '\n\x1B[31m' + stack + '\x1B[39m' : ''
       }`;
     });
