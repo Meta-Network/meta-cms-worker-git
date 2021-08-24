@@ -34,7 +34,7 @@ export class ZipArchiveService {
         res(output);
       });
       stream.on('error', (err) => {
-        logger.error(err, '7zip::decompressTemplateArchive');
+        logger.error('7zip::decompressTemplateArchive', err);
         rej(err);
       });
     });

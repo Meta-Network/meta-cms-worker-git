@@ -1,86 +1,151 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import pino, { P } from 'pino';
 import process from 'process';
+import winston, { createLogger, transport } from 'winston';
+import { CliConfigSetLevels } from 'winston/lib/winston/config';
 
 import { config } from '../configs';
+import { RemoveIndex } from '../types';
 import { isProd } from '../utils';
-
-type DestinationOptions = {
-  destination: string | number;
-};
 
 class LoggerService {
   public constructor() {
     const appName = config.get<string>('app.name');
     const dirName = appName.toLowerCase();
     const baseDir = fs.mkdtempSync(`${path.join(os.tmpdir(), dirName)}-`);
-    const level = this.mkLevel(process.env.DEBUG || 'debug');
+    const level = this.mkLevel(process.env.DEBUG);
 
-    const prettyTarget: P.TransportTargetOptions<P.PrettyOptions> = {
-      level,
-      target: '#pino/pretty',
-      options: config.get<P.PrettyOptions>('logger.prettyPrint'),
-    };
+    const defaultWinstonFormat = winston.format.combine(
+      winston.format.label({ label: appName }),
+      winston.format.timestamp({ format: 'MM/DD/YYYY, hh:mm:ss A' }),
+      winston.format.errors({ stack: true }),
+      winston.format.splat(),
+      winston.format.ms(),
+    );
 
-    const targets: P.TransportTargetOptions<
-      DestinationOptions | P.PrettyOptions
-    >[] = [
-      {
-        level,
-        target: '#pino/file',
-        options: { destination: `${baseDir}/${level}.log` },
-      },
-      {
-        level: 'error',
-        target: '#pino/file',
-        options: { destination: `${baseDir}/error.log` },
-      },
-    ];
-
-    if (!isProd()) targets.push(prettyTarget);
-
-    const transports = pino.transport<DestinationOptions | P.PrettyOptions>({
-      targets,
+    const errorConsoleFormat = winston.format.printf((info) => {
+      if (process.env.DEBUG)
+        console.log('\x1B[35merrorConsoleFormat:info:\x1B[39m', info);
+      const { metadata, label, timestamp, level, message } = info;
+      const pid = metadata?.runtime?.pid || 'null';
+      const ctx = metadata?.context;
+      return `\x1B[32m[${label}] ${pid} -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message}`;
     });
 
-    const _logger = pino({ name: appName }, transports);
+    const transports: transport[] = [
+      new winston.transports.File({
+        level,
+        filename: `${baseDir}/${level}.log`,
+        format: winston.format.combine(winston.format.json()),
+      }),
+      new winston.transports.File({
+        level: 'error',
+        filename: `${baseDir}/error.log`,
+        format: winston.format.combine(winston.format.json()),
+        handleExceptions: true,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        handleRejections: true,
+      }),
+      new winston.transports.Console({
+        level: 'error',
+        format: winston.format.combine(
+          winston.format.colorize({ all: true }),
+          winston.format.metadata({
+            fillExcept: ['label', 'timestamp', 'level', 'message'],
+          }),
+          errorConsoleFormat,
+        ),
+        handleExceptions: true,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        handleRejections: true,
+      }),
+    ];
+
+    const _logger = createLogger({
+      level,
+      format: defaultWinstonFormat,
+      defaultMeta: {
+        runtime: {
+          pid: process.pid,
+          platform: process.platform,
+          versions: { ...process.versions },
+        },
+        context: 'main',
+      },
+      transports,
+      exitOnError: true,
+    });
+
+    const debugConsoleFormat = winston.format.printf((info) => {
+      if (process.env.DEBUG)
+        console.log('\x1B[35mdebugConsoleFormat:info:\x1B[39m', info);
+      const { metadata, label, timestamp, level, message } = info;
+      const pid = metadata?.runtime?.pid || 'null';
+      const ctx = metadata?.context;
+      const ms = metadata?.ms || '-ms';
+      const stack = metadata?.stack;
+      return `\x1B[32m[${label}] ${pid} -\x1B[39m ${timestamp}     ${level} \x1B[33m[${ctx}]\x1B[39m ${message} \x1B[33m${ms}\x1B[39m${
+        stack ? '\n\x1B[31m' + stack + '\x1B[39m' : ''
+      }`;
+    });
+
+    const debugConsoleTransport: transport = new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize({ all: true }),
+        winston.format.metadata({
+          fillExcept: ['label', 'timestamp', 'level', 'message'],
+        }),
+        debugConsoleFormat,
+      ),
+    });
+
+    if (!isProd()) _logger.add(debugConsoleTransport);
 
     this.logDir = baseDir;
 
     this.logger = _logger;
 
-    this.final = pino.final(_logger, (error, finalLogger, event: string) => {
-      finalLogger.info(`${event} caught, the process was exit`);
-      if (error instanceof Error) finalLogger.error(error);
-      finalLogger.info(`Uploading log files from ${this.logDir}`);
+    this.final = (error?: Error | string | null, ...args: unknown[]) => {
+      if (process.env.DEBUG)
+        console.log('\x1B[35mLoggerService:final:info:\x1B[39m', error);
+      if (error instanceof Error) {
+        this.logger.error(`The process was exit cause: `, error, args);
+      } else {
+        this.logger.info(`The process was exit cause:`, error, args);
+      }
+      this.logger.info(`Uploading log files from ${this.logDir}`);
       // TODO: Some log upload task
-      process.exit(error ? 1 : 0);
-    });
+      process.exitCode = error ? 1 : 0;
+    };
 
     this.logger.info(`Log files saved to ${baseDir}`);
   }
 
   private readonly logDir: string;
-  readonly logger: P.Logger;
+  readonly logger: winston.Logger;
   readonly final: (error?: Error | string | null, ...args: any[]) => void;
 
-  private mkLevel(l: string): P.LevelWithSilent {
+  private mkLevel(l: string): keyof RemoveIndex<CliConfigSetLevels> {
     const levelArr = [
-      'fatal',
       'error',
       'warn',
+      'help',
+      'data',
       'info',
       'debug',
-      'trace',
-      'silent',
+      'prompt',
+      'verbose',
+      'input',
+      'silly',
     ];
     if (levelArr.includes(l)) {
-      return l as P.LevelWithSilent;
+      return l as keyof RemoveIndex<CliConfigSetLevels>;
     }
     if (isProd()) return 'info';
-    return 'trace';
+    return 'verbose';
   }
 }
 
