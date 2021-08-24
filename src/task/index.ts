@@ -5,7 +5,6 @@ import { TaskMethod } from '../types/enum';
 
 export const startGitTask = async (): Promise<void> => {
   const http = new HttpRequestService();
-  logger.info('Getting new Git task from backend or gateway');
   const taskConf = await http.getWorkerTaskFromBackend();
   if (!taskConf) throw Error('Can not get task config from backend or gateway');
 

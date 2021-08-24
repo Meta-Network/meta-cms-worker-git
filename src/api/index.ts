@@ -34,6 +34,8 @@ export class HttpRequestService {
   private readonly apiUrl: string;
 
   async getWorkerTaskFromBackend(): Promise<TaskConfig> {
+    logger.info('Getting new Git task from backend');
+
     const _res = await this.client
       .get(this.apiUrl)
       .set('Authorization', this.authInfo);
@@ -44,6 +46,8 @@ export class HttpRequestService {
   }
 
   async reportWorkerTaskStartedToBackend(): Promise<void> {
+    logger.info('Reporting worker task started to backend');
+
     const _res = await this.client
       .patch(this.apiUrl)
       .send({ reason: 'STARTED', timestamp: Date.now() })
@@ -52,10 +56,34 @@ export class HttpRequestService {
     logger.info(`Report worker task started to backend ${_res.statusCode}`);
   }
 
-  async reportWorkerTaskHealthStatusToBackend(): Promise<void> {
+  async reportWorkerTaskFinishedToBackend(): Promise<void> {
+    logger.info('Reporting worker task finished to backend');
+
     const _res = await this.client
       .patch(this.apiUrl)
-      .send({ reason: 'STARTED', timestamp: Date.now() })
+      .send({ reason: 'FINISHED', timestamp: Date.now() })
+      .set('Authorization', this.authInfo);
+
+    logger.info(`Report worker task finished to backend ${_res.statusCode}`);
+  }
+
+  async reportWorkerTaskErroredToBackend(error: Error): Promise<void> {
+    logger.info('Reporting worker task errored to backend');
+
+    const _res = await this.client
+      .patch(this.apiUrl)
+      .send({ reason: 'ERRORED', timestamp: Date.now(), data: error })
+      .set('Authorization', this.authInfo);
+
+    logger.info(`Report worker task errored to backend ${_res.statusCode}`);
+  }
+
+  async reportWorkerTaskHealthStatusToBackend(): Promise<void> {
+    logger.info('Reporting worker task health status to backend');
+
+    const _res = await this.client
+      .patch(this.apiUrl)
+      .send({ reason: 'HEALTH_CHECK', timestamp: Date.now() })
       .set('Authorization', this.authInfo);
 
     logger.info(
