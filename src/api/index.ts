@@ -1,6 +1,7 @@
 import superagent, { SuperAgentStatic } from 'superagent';
 
 import { config } from '../configs';
+import { logger } from '../logger';
 import { TaskConfig } from '../types';
 
 export class HttpRequestService {
@@ -21,8 +22,14 @@ export class HttpRequestService {
   private readonly secret: string;
 
   async getWorkerTaskFromBackend(): Promise<TaskConfig> {
+    const _host = config.get<string>('HOSTNAME');
+    if (!_host) throw Error('Can not get HOSTNAME env');
+
+    const _url = `${this.apiUrl}/task/${_host}`;
+    logger.info(`Send GET request to ${_url}`);
+
     const _res = await this.client
-      .get(`${this.apiUrl}/task`)
+      .get(_url)
       .set(
         'Authorization',
         `Basic ${Buffer.from(this.secret).toString('base64')}`,
