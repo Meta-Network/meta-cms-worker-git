@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import process from 'process';
+import superagent from 'superagent';
 import winston, { createLogger, transport } from 'winston';
 import { CliConfigSetLevels } from 'winston/lib/winston/config';
 
@@ -15,6 +16,28 @@ class LoggerService {
     const dirName = appName.toLowerCase();
     const baseDir = fs.mkdtempSync(`${path.join(os.tmpdir(), dirName)}-`);
     const level = this.mkLevel(process.env.DEBUG);
+
+    const reportAppErrorStatus = (err: Error): boolean => {
+      // Dirty code!
+      try {
+        const _host = config.get<string>('backend.host');
+        const _port = config.get<number>('backend.port');
+        const _name = config.get<string>('HOSTNAME');
+        const _url = `${_host}:${_port}/task/git/${_name}`;
+        const _sec = config.get<string>('WORKER_SECRET');
+        const _auth = `Basic ${Buffer.from(_sec).toString('base64')}`;
+
+        superagent
+          .patch(_url)
+          .send({ reason: 'ERRORED', timestamp: Date.now(), data: err })
+          .set('Authorization', _auth)
+          .then();
+
+        return true;
+      } finally {
+        return true;
+      }
+    };
 
     const defaultWinstonFormat = winston.format.combine(
       winston.format.label({ label: appName }),
@@ -78,7 +101,7 @@ class LoggerService {
         context: 'main',
       },
       transports,
-      exitOnError: true,
+      exitOnError: reportAppErrorStatus,
     });
 
     const debugConsoleFormat = winston.format.printf((info) => {
