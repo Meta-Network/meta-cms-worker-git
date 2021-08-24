@@ -14,24 +14,28 @@ export class HttpRequestService {
     this.authInfo = `Basic ${Buffer.from(this.secret).toString('base64')}`;
 
     const _host = config.get<string>('backend.host');
+    if (!_host) throw Error('Can not find backend host config');
     const _port = config.get<number>('backend.port');
-    this.apiUrl = `${_host}:${_port}`;
+    if (!_port) throw Error('Can not find backend port config');
+    this.baseUrl = `${_host}:${_port}`;
 
     const _name = config.get<string>('HOSTNAME');
     if (!_name) throw Error('Can not find HOSTNAME env');
+    this.hostName = _name;
+
+    this.apiUrl = `${this.baseUrl}/task/git/${this.hostName}`;
   }
 
   private readonly client: SuperAgentStatic;
   private readonly secret: string;
   private readonly authInfo: string;
-  private readonly apiUrl: string;
+  private readonly baseUrl: string;
   private readonly hostName: string;
+  private readonly apiUrl: string;
 
   async getWorkerTaskFromBackend(): Promise<TaskConfig> {
-    const _url = `${this.apiUrl}/task/${this.hostName}`;
-
     const _res = await this.client
-      .get(_url)
+      .get(this.apiUrl)
       .set('Authorization', this.authInfo);
 
     const _data: TaskConfig = _res?.body?.data;
@@ -40,10 +44,8 @@ export class HttpRequestService {
   }
 
   async reportWorkerTaskStartedToBackend(): Promise<void> {
-    const _url = `${this.apiUrl}/task/${this.hostName}`;
-
     const _res = await this.client
-      .patch(_url)
+      .patch(this.apiUrl)
       .send({ reason: 'STARTED', timestamp: Date.now() })
       .set('Authorization', this.authInfo);
 
@@ -51,10 +53,8 @@ export class HttpRequestService {
   }
 
   async reportWorkerTaskHealthStatusToBackend(): Promise<void> {
-    const _url = `${this.apiUrl}/task/${this.hostName}`;
-
     const _res = await this.client
-      .patch(_url)
+      .patch(this.apiUrl)
       .send({ reason: 'STARTED', timestamp: Date.now() })
       .set('Authorization', this.authInfo);
 
