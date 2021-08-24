@@ -1,27 +1,14 @@
+import { HttpRequestService } from '../api';
 import { GitService } from '../git';
 import { logger, loggerService } from '../logger';
-import { TaskConfig } from '../types';
-import { GitServiceType, TaskMethod } from '../types/enum';
+import { TaskMethod } from '../types/enum';
 
 export const startGitTask = async (): Promise<void> => {
-  logger.info('Getting new Git task from gateway');
-  // TODO: Get task
+  const http = new HttpRequestService();
+  logger.info('Getting new Git task from backend or gateway');
+  const taskConf = await http.getWorkerTaskFromBackend();
+  if (!taskConf) throw Error('Can not get task config from backend or gateway');
 
-  const taskConf: TaskConfig = {
-    taskId: '123e4567-e89b-12d3-a456-426614174000',
-    taskMethod: TaskMethod.CREATE_REPO_FROM_TEMPLATE,
-    username: 'Garfield550',
-    title: 'Test Site',
-    configId: 1,
-    templateName: 'Cactus',
-    templateRepoUrl: 'https://github.com/whyouare111/hexo-theme-cactus.git',
-    templateBranchName: 'metaspace',
-    gitToken: 'gho_',
-    gitType: GitServiceType.GITHUB,
-    gitUsername: 'Garfield550',
-    gitReponame: 'my-awesome-site',
-    gitBranchName: 'meow',
-  };
   const { taskId, taskMethod } = taskConf;
   logger.info(`Task id ${taskId} start, method ${taskMethod}`);
 
