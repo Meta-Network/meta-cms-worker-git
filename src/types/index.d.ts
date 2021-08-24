@@ -1,5 +1,13 @@
 import { GitServiceType, TaskMethod, TemplateType } from './enum';
 
+export type RemoveIndex<Q> = {
+  [key in keyof Q as string extends key
+    ? never
+    : key extends string
+    ? key
+    : never]: Q[key];
+};
+
 export type UCenterUserInfo = {
   username: string;
   nickname?: string;
