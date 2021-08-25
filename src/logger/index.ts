@@ -5,6 +5,7 @@ import process from 'process';
 import superagent from 'superagent';
 import winston, { createLogger, transport } from 'winston';
 import { CliConfigSetLevels } from 'winston/lib/winston/config';
+import LokiTransport from 'winston-loki';
 
 import { config } from '../configs';
 import { RemoveIndex } from '../types';
@@ -58,6 +59,16 @@ class LoggerService {
     });
 
     const transports: transport[] = [
+      new LokiTransport({
+        level: 'verbose',
+        json: true,
+        labels: { job: appName },
+        host: config.get<string>('loki.host'),
+        handleExceptions: true,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        handleRejections: true,
+      }),
       new winston.transports.File({
         level,
         filename: `${baseDir}/${level}.log`,
@@ -142,9 +153,9 @@ class LoggerService {
       } else {
         this.logger.info(`The process was exit cause:`, error, args);
       }
-      this.logger.info(`Uploading log files from ${this.logDir}`);
-      // TODO: Some log upload task
+      this.logger.info(`Log files saved to ${this.logDir}`);
       process.exitCode = error ? 1 : 0;
+      this.logger.end(() => process.exit());
     };
 
     this.logger.info(`Log files saved to ${baseDir}`);
