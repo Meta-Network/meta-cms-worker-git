@@ -1,12 +1,5 @@
 app:
   name: MetaCMSWorkerGit
-  port: 3001
-
-logger:
-  prettyPrint:
-    colorize: true
-    levelFirst: true
-    translateTime: mm/dd/yy hh:mm:ss TT
 
 git:
   baseDirName: worker-git-data
@@ -17,3 +10,6 @@ sevenZip:
 backend:
   host:
   port:
+
+loki:
+  host:
