@@ -18,7 +18,7 @@ export const startGitTask = async (): Promise<void> => {
     const repo = await gitService.createRepoFromTemplate();
     await gitService.pushLocalRepoToRemote(repo);
     logger.info(`Task createRepoFromTemplate finished`);
-    // TODO: Report taskId finish
-    loggerService.final(null, 'Task finished');
+    await http.reportWorkerTaskFinishedToBackend();
+    loggerService.final('Task finished');
   }
 };
