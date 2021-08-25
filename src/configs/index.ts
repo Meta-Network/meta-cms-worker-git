@@ -10,13 +10,33 @@ import { isProd, isUndefined } from '../utils';
 
 const YAML_CONFIG_FILENAME = isProd() ? 'config.prod.yaml' : 'config.dev.yaml';
 
-const configBuilder = () => {
-  return yaml.parse(
-    fs.readFileSync(
-      path.join(__dirname, '..', '..', YAML_CONFIG_FILENAME),
-      'utf8',
-    ),
-  ) as Record<string, unknown>;
+const openConfigFile = (): Record<string, unknown> => {
+  try {
+    const configFile = path.join(__dirname, '..', '..', YAML_CONFIG_FILENAME);
+    fs.accessSync(configFile, fs.constants.R_OK);
+    const configData = fs.readFileSync(configFile, 'utf8');
+    return yaml.parse(configData);
+  } catch (error) {
+    return {};
+  }
+};
+
+const readProcessEnv = (): Record<string, unknown> => {
+  try {
+    const config = process.env.WORKER_CONFIGS;
+    if (config) {
+      const data = Buffer.from(config, 'base64').toString();
+      return yaml.parse(data);
+    }
+  } catch (error) {
+    return {};
+  }
+};
+
+const configBuilder = (): Record<string, unknown> => {
+  const file = openConfigFile();
+  const env = readProcessEnv();
+  return { ...file, ...env };
 };
 
 interface ConfigGetOptions {
