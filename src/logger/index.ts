@@ -145,16 +145,17 @@ class LoggerService {
 
     this.logger = _logger;
 
-    this.final = (error?: Error | string | null, ...args: unknown[]) => {
+    this.final = (error?: Error | string) => {
       if (process.env.DEBUG)
         console.log('\x1B[35mLoggerService:final:info:\x1B[39m', error);
       if (error instanceof Error) {
-        this.logger.error(`The process was exit cause: `, error, args);
+        process.exitCode = 1;
+        this.logger.error(`The process was exit cause: `, error);
       } else {
-        this.logger.info(`The process was exit cause:`, error, args);
+        process.exitCode = 0;
+        this.logger.info(`The process was exit cause:`, error);
       }
       this.logger.info(`Log files saved to ${this.logDir}`);
-      process.exitCode = error ? 1 : 0;
       this.logger.end(() => process.exit());
     };
 
