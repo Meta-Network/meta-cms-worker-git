@@ -68,6 +68,7 @@ class LoggerService {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         handleRejections: true,
+        replaceTimestamp: true,
       }),
       new winston.transports.File({
         level,
