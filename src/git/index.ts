@@ -1,3 +1,4 @@
+import { MetaWorker } from '@metaio/worker-model';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import fse from 'fs-extra';
@@ -7,8 +8,7 @@ import path from 'path';
 
 import { config } from '../configs';
 import { logger } from '../logger';
-import { DownloadRepositoryArchiveReturn, TaskConfig } from '../types';
-import { GitServiceType } from '../types/enum';
+import { DownloadRepositoryArchiveReturn } from '../types';
 import { GitHubService } from './github';
 import { ZipArchiveService } from './zip';
 
@@ -23,7 +23,9 @@ type BuildBasicInfoFromTemplateUrl = {
 };
 
 export class GitService {
-  constructor(private readonly taskConfig: TaskConfig) {
+  constructor(
+    private readonly taskConfig: MetaWorker.Configs.GitWorkerTaskConfig,
+  ) {
     const dirName = config.get<string>('git.baseDirName');
     if (!dirName)
       throw new Error('GitService: can not get base dir name in config');
@@ -41,11 +43,11 @@ export class GitService {
   private readonly signature: Signature;
 
   private async buildRemoteHttpUrl(
-    type: GitServiceType,
+    type: MetaWorker.Enums.GitServiceType,
     uname: string,
     rname: string,
   ): Promise<string> {
-    if (type === GitServiceType.GITHUB) {
+    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const remoteUrl = `https://github.com/${uname}/${rname}.git`;
       logger.info(`Git remote url is: ${remoteUrl}`);
       return remoteUrl;
@@ -54,12 +56,12 @@ export class GitService {
   }
 
   private async buildRemoteHttpUrlWithToken(
-    type: GitServiceType,
+    type: MetaWorker.Enums.GitServiceType,
     token: string,
     uname: string,
     rname: string,
   ): Promise<BuildRemoteHttpUrlWithTokenReturn> {
-    if (type === GitServiceType.GITHUB) {
+    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const originUrl = await this.buildRemoteHttpUrl(type, uname, rname);
       const pass = 'x-oauth-basic';
       const result = {
@@ -75,10 +77,10 @@ export class GitService {
   }
 
   private async buildBasicInfoFromTemplateUrl(
-    type: GitServiceType,
+    type: MetaWorker.Enums.GitServiceType,
     url: string,
   ): Promise<BuildBasicInfoFromTemplateUrl> {
-    if (type === GitServiceType.GITHUB) {
+    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const info = url
         .replace('https://github.com/', '')
         .replace('.git', '')
@@ -89,13 +91,13 @@ export class GitService {
   }
 
   private async downloadTemplateFromUrl(
-    type: GitServiceType,
+    type: MetaWorker.Enums.GitServiceType,
     url: string,
     branch?: string,
   ): Promise<DownloadRepositoryArchiveReturn> {
     const { owner, repo } = await this.buildBasicInfoFromTemplateUrl(type, url);
 
-    if (type === GitServiceType.GITHUB) {
+    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const github = new GitHubService(this.baseDir);
       return await github.downloadRepositoryArchive(owner, repo, branch);
     }

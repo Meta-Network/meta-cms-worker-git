@@ -1,7 +1,8 @@
+import { MetaWorker } from '@metaio/worker-model';
+
 import { HttpRequestService } from '../api';
 import { GitService } from '../git';
 import { logger, loggerService } from '../logger';
-import { TaskMethod } from '../types/enum';
 
 export const startGitTask = async (): Promise<void> => {
   const http = new HttpRequestService();
@@ -13,7 +14,7 @@ export const startGitTask = async (): Promise<void> => {
 
   const gitService = new GitService(taskConf);
 
-  if (taskMethod === TaskMethod.CREATE_REPO_FROM_TEMPLATE) {
+  if (taskMethod === MetaWorker.Enums.TaskMethod.CREATE_REPO_FROM_TEMPLATE) {
     logger.info(`Starting task createRepoFromTemplate`);
     const repo = await gitService.createRepoFromTemplate();
     await gitService.pushLocalRepoToRemote(repo);

@@ -1,8 +1,8 @@
+import { MetaWorker } from '@metaio/worker-model';
 import superagent, { SuperAgentStatic } from 'superagent';
 
 import { config } from '../configs';
 import { logger } from '../logger';
-import { TaskConfig } from '../types';
 
 export class HttpRequestService {
   constructor() {
@@ -33,14 +33,14 @@ export class HttpRequestService {
   private readonly hostName: string;
   private readonly apiUrl: string;
 
-  async getWorkerTaskFromBackend(): Promise<TaskConfig> {
+  async getWorkerTaskFromBackend(): Promise<MetaWorker.Configs.GitWorkerTaskConfig> {
     logger.info('Getting new Git task from backend');
 
     const _res = await this.client
       .get(this.apiUrl)
       .set('Authorization', this.authInfo);
 
-    const _data: TaskConfig = _res?.body?.data;
+    const _data: MetaWorker.Configs.GitWorkerTaskConfig = _res?.body?.data;
     if (!_data) throw Error('Can not get task config from backend');
     return _data;
   }
