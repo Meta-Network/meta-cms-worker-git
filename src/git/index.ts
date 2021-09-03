@@ -6,7 +6,6 @@ import Git, { Repository, Signature } from 'nodegit';
 import os from 'os';
 import path from 'path';
 
-import { config } from '../configs';
 import { logger } from '../logger';
 import { DownloadRepositoryArchiveReturn } from '../types';
 import { GitHubService } from './github';
@@ -26,11 +25,10 @@ export class GitService {
   constructor(
     private readonly taskConfig: MetaWorker.Configs.GitWorkerTaskConfig,
   ) {
-    const dirName = config.get<string>('git.baseDirName');
-    if (!dirName)
-      throw new Error('GitService: can not get base dir name in config');
+    const dirName = taskConfig.taskWorkspace;
 
-    const baseDir = fs.mkdtempSync(`${path.join(os.tmpdir(), dirName)}-`);
+    const baseDir = `${path.join(os.tmpdir(), dirName)}`;
+    fs.mkdirSync(baseDir, { recursive: true });
     logger.info(`Git temporary directory is created, path: ${baseDir}`);
 
     this.baseDir = baseDir;

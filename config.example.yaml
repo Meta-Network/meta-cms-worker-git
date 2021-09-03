@@ -1,9 +1,6 @@
 app:
   name: MetaCMSWorkerGit
 
-git:
-  baseDirName: worker-git-data
-
 sevenZip:
   binName: 7zz
 
