@@ -52,9 +52,14 @@ export class HttpRequestService {
       context: HttpRequestService.name,
     });
 
+    const data: MetaWorker.Info.TaskReport = {
+      reason: MetaWorker.Enums.TaskReportReason.STARTED,
+      timestamp: Date.now(),
+    };
+
     const _res = await this.client
       .patch(this.apiUrl)
-      .send({ reason: 'STARTED', timestamp: Date.now() })
+      .send(data)
       .set('Authorization', this.authInfo);
 
     logger.info(`Report worker task started to backend ${_res.statusCode}`, {
@@ -67,9 +72,14 @@ export class HttpRequestService {
       context: HttpRequestService.name,
     });
 
+    const data: MetaWorker.Info.TaskReport = {
+      reason: MetaWorker.Enums.TaskReportReason.FINISHED,
+      timestamp: Date.now(),
+    };
+
     const _res = await this.client
       .patch(this.apiUrl)
-      .send({ reason: 'FINISHED', timestamp: Date.now() })
+      .send(data)
       .set('Authorization', this.authInfo);
 
     logger.info(`Report worker task finished to backend ${_res.statusCode}`, {
@@ -82,9 +92,15 @@ export class HttpRequestService {
       context: HttpRequestService.name,
     });
 
+    const data: MetaWorker.Info.TaskReport = {
+      reason: MetaWorker.Enums.TaskReportReason.ERRORED,
+      timestamp: Date.now(),
+      data: error,
+    };
+
     const _res = await this.client
       .patch(this.apiUrl)
-      .send({ reason: 'ERRORED', timestamp: Date.now(), data: error })
+      .send(data)
       .set('Authorization', this.authInfo);
 
     logger.info(`Report worker task errored to backend ${_res.statusCode}`, {
@@ -97,9 +113,14 @@ export class HttpRequestService {
       context: HttpRequestService.name,
     });
 
+    const data: MetaWorker.Info.TaskReport = {
+      reason: MetaWorker.Enums.TaskReportReason.HEALTH_CHECK,
+      timestamp: Date.now(),
+    };
+
     const _res = await this.client
       .patch(this.apiUrl)
-      .send({ reason: 'HEALTH_CHECK', timestamp: Date.now() })
+      .send(data)
       .set('Authorization', this.authInfo);
 
     logger.info(
