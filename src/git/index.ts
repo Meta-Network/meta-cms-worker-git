@@ -26,10 +26,13 @@ export class GitService {
     private readonly taskConfig: MetaWorker.Configs.GitWorkerTaskConfig,
   ) {
     const dirName = taskConfig.taskWorkspace;
+    logger.info(`Task workspace is ${dirName}`, { context: GitService.name });
 
     const baseDir = `${path.join(os.tmpdir(), dirName)}`;
     fs.mkdirSync(baseDir, { recursive: true });
-    logger.info(`Git temporary directory is created, path: ${baseDir}`);
+    logger.info(`Git temporary directory is created, path: ${baseDir}`, {
+      context: GitService.name,
+    });
 
     this.baseDir = baseDir;
 
@@ -47,7 +50,9 @@ export class GitService {
   ): Promise<string> {
     if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const remoteUrl = `https://github.com/${uname}/${rname}.git`;
-      logger.info(`Git remote url is: ${remoteUrl}`);
+      logger.info(`Git remote url is: ${remoteUrl}`, {
+        context: GitService.name,
+      });
       return remoteUrl;
     }
     // TODO: Unsupport type
@@ -116,7 +121,9 @@ export class GitService {
     rawName?: string,
   ): Promise<void> {
     let _cPath = tPath.replace(path.extname(tPath), '');
-    logger.info(`Template directory is ${_cPath}`);
+    logger.info(`Template directory is ${_cPath}`, {
+      context: GitService.name,
+    });
 
     if (rawName) {
       const files = await fsp.readdir(_cPath);
@@ -124,7 +131,9 @@ export class GitService {
       if (files.includes(rawNameNoExt)) _cPath = `${_cPath}/${rawNameNoExt}`;
     }
 
-    logger.info(`Copy template files from ${_cPath} to ${rPath}`);
+    logger.info(`Copy template files from ${_cPath} to ${rPath}`, {
+      context: GitService.name,
+    });
     await fse.copy(_cPath, rPath, { recursive: true, overwrite: true });
   }
 
@@ -138,7 +147,9 @@ export class GitService {
     } = this.taskConfig;
     const repoPath = `${this.baseDir}/${gitReponame}`;
 
-    logger.info(`Initialize repo ${gitReponame} to ${repoPath}`);
+    logger.info(`Initialize repo ${gitReponame} to ${repoPath}`, {
+      context: GitService.name,
+    });
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     const _localRepo = await Git.Repository.initExt(repoPath, {
@@ -146,7 +157,9 @@ export class GitService {
       initialHead: gitBranchName,
     });
 
-    logger.info(`Download template zip archive from ${templateRepoUrl}`);
+    logger.info(`Download template zip archive from ${templateRepoUrl}`, {
+      context: GitService.name,
+    });
     const _archive = await this.downloadTemplateFromUrl(
       gitType,
       templateRepoUrl,
@@ -155,16 +168,22 @@ export class GitService {
 
     const { filePath, rawFileName } = _archive;
 
-    logger.info(`Decompress template archive ${filePath}`);
+    logger.info(`Decompress template archive ${filePath}`, {
+      context: GitService.name,
+    });
     const _template = await this.decompressTemplateArchive(filePath);
 
     await this.copyTemplateFilesIntoRepo(_template, repoPath, rawFileName);
 
     const _index = await _localRepo.refreshIndex();
     const _addAll = await _index.addAll();
-    if (_addAll === 0) logger.info(`Successful add all entries to index`);
+    if (_addAll === 0)
+      logger.info(`Successful add all entries to index`, {
+        context: GitService.name,
+      });
     const _writeIndex = await _index.write();
-    if (_writeIndex === 0) logger.info(`Successful write index`);
+    if (_writeIndex === 0)
+      logger.info(`Successful write index`, { context: GitService.name });
     const _oId = await _index.writeTree();
 
     const _commit = await _localRepo.createCommit(
@@ -175,7 +194,9 @@ export class GitService {
       _oId,
       [],
     );
-    logger.info(`Create initial commit with commit hash ${_commit.tostrS()}`);
+    logger.info(`Create initial commit with commit hash ${_commit.tostrS()}`, {
+      context: GitService.name,
+    });
 
     return _localRepo;
   }
@@ -194,10 +215,13 @@ export class GitService {
 
     logger.info(
       `Pushing local repository to remote origin ${originUrl}, branch ${gitBranchName}`,
+      { context: GitService.name },
     );
     await _remote.push([
       `refs/heads/${gitBranchName}:refs/heads/${gitBranchName}`,
     ]);
-    logger.info(`Successfully pushed to ${originUrl}`);
+    logger.info(`Successfully pushed to ${originUrl}`, {
+      context: GitService.name,
+    });
   }
 }

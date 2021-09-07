@@ -16,7 +16,9 @@ export class ZipArchiveService {
     this.bin = bin;
     this.binPath = path;
 
-    logger.info(`ZipArchiveService use ${this.bin} from ${this.binPath}`);
+    logger.info(`ZipArchiveService use ${this.bin} from ${this.binPath}`, {
+      context: ZipArchiveService.name,
+    });
   }
 
   private readonly bin: string;
@@ -24,17 +26,23 @@ export class ZipArchiveService {
 
   async extractAllFiles(file: string, output: string): Promise<string> {
     const extractFile = new Promise<string>((res, rej) => {
-      logger.info(`Extracting file to ${output}`);
+      logger.info(`Extracting file to ${output}`, {
+        context: ZipArchiveService.name,
+      });
       const stream = SevenZip.extractFull(file, output, { $bin: this.binPath });
       stream.on('data', (data) => {
-        logger.info(`File ${data.file} ${data.status}`);
+        logger.info(`File ${data.file} ${data.status}`, {
+          context: ZipArchiveService.name,
+        });
       });
       stream.on('end', () => {
-        logger.info('Extract completed');
+        logger.info('Extract completed', { context: ZipArchiveService.name });
         res(output);
       });
       stream.on('error', (err) => {
-        logger.error('7zip::decompressTemplateArchive', err);
+        logger.error('7zip::decompressTemplateArchive', err, {
+          context: ZipArchiveService.name,
+        });
         rej(err);
       });
     });

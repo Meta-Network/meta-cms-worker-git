@@ -33,12 +33,16 @@ export class GitHubService {
       '',
     );
 
-    logger.info(`Downloading file from ${_res.url}`);
+    logger.info(`Downloading file from ${_res.url}`, {
+      context: GitHubService.name,
+    });
 
     const fileName = 'template.zip';
     const filePath = `${this.tmpDir}/${fileName}`;
     await fs.writeFile(filePath, Buffer.from(_res.data));
-    logger.info(`File ${filePath} download complete`);
+    logger.info(`File ${filePath} download complete`, {
+      context: GitHubService.name,
+    });
 
     return { fileName, filePath, rawFileName };
   }
