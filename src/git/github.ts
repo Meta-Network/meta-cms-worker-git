@@ -15,6 +15,7 @@ export class GitHubService {
     owner: string,
     repo: string,
     ref?: string,
+    file = 'template.zip',
   ): Promise<DownloadRepositoryArchiveReturn> {
     let req = 'GET /repos/{owner}/{repo}/zipball';
     if (ref) req = req.concat('/{ref}');
@@ -37,7 +38,7 @@ export class GitHubService {
       context: GitHubService.name,
     });
 
-    const fileName = 'template.zip';
+    const fileName = file;
     const filePath = `${this.tmpDir}/${fileName}`;
     await fs.writeFile(filePath, Buffer.from(_res.data));
     logger.info(`File ${filePath} download complete`, {

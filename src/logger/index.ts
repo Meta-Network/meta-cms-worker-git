@@ -154,7 +154,7 @@ class LoggerService {
         this.logger.error(`The process was exit cause: `, error);
       } else {
         process.exitCode = 0;
-        this.logger.info(`The process was exit cause:`, error);
+        this.logger.info(`The process was exit cause:`, ...error);
       }
       this.logger.info(`Log files saved to ${this.logDir}`);
       this.logger.end(() => process.exit());
