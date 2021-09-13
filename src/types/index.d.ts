@@ -1,3 +1,5 @@
+import { MetaWorker } from '@metaio/worker-model';
+
 export type RemoveIndex<Q> = {
   [key in keyof Q as string extends key
     ? never
@@ -11,3 +13,7 @@ export type DownloadRepositoryArchiveReturn = {
   fileName: string;
   rawFileName: string;
 };
+
+export type MixedTaskConfig =
+  | MetaWorker.Configs.DeployTaskConfig
+  | MetaWorker.Configs.PublishTaskConfig;

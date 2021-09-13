@@ -7,7 +7,7 @@ import os from 'os';
 import path from 'path';
 
 import { logger } from '../logger';
-import { DownloadRepositoryArchiveReturn } from '../types';
+import { DownloadRepositoryArchiveReturn, MixedTaskConfig } from '../types';
 import { GitHubService } from './github';
 import { ZipArchiveService } from './zip';
 
@@ -22,9 +22,7 @@ type BuildBasicInfoFromTemplateUrl = {
 };
 
 export class GitService {
-  constructor(
-    private readonly taskConfig: MetaWorker.Configs.GitWorkerTaskConfig,
-  ) {
+  constructor(private readonly taskConfig: MixedTaskConfig) {
     const dirName = taskConfig.taskWorkspace;
     logger.info(`Task workspace is ${dirName}`, { context: GitService.name });
 
@@ -144,7 +142,7 @@ export class GitService {
       gitBranchName,
       templateRepoUrl,
       templateBranchName,
-    } = this.taskConfig;
+    } = this.taskConfig as MetaWorker.Configs.DeployConfig;
     const repoPath = `${this.baseDir}/${gitReponame}`;
 
     logger.info(`Initialize repo ${gitReponame} to ${repoPath}`, {

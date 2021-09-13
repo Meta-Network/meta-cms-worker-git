@@ -3,6 +3,7 @@ import superagent, { SuperAgentStatic } from 'superagent';
 
 import { config } from '../configs';
 import { logger } from '../logger';
+import { MixedTaskConfig } from '../types';
 
 export class HttpRequestService {
   constructor() {
@@ -33,7 +34,7 @@ export class HttpRequestService {
   private readonly hostName: string;
   private readonly apiUrl: string;
 
-  async getWorkerTaskFromBackend(): Promise<MetaWorker.Configs.GitWorkerTaskConfig> {
+  async getWorkerTaskFromBackend(): Promise<MixedTaskConfig> {
     logger.info('Getting new Git task from backend', {
       context: HttpRequestService.name,
     });
@@ -42,7 +43,7 @@ export class HttpRequestService {
       .get(this.apiUrl)
       .set('Authorization', this.authInfo);
 
-    const _data: MetaWorker.Configs.GitWorkerTaskConfig = _res?.body?.data;
+    const _data: MixedTaskConfig = _res?.body?.data;
     if (!_data) throw Error('Can not get task config from backend');
     return _data;
   }

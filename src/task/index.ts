@@ -14,7 +14,7 @@ export const startGitTask = async (): Promise<void> => {
 
   const gitService = new GitService(taskConf);
 
-  if (taskMethod === MetaWorker.Enums.TaskMethod.CREATE_REPO_FROM_TEMPLATE) {
+  if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_INIT_PUSH) {
     logger.info(`Starting task createRepoFromTemplate`);
     const repo = await gitService.createRepoFromTemplate();
     await gitService.pushLocalRepoToRemote(repo);

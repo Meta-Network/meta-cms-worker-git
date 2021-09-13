@@ -572,10 +572,10 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
-"@metaio/worker-model@^1.0.0":
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/@metaio/worker-model/-/worker-model-1.0.7.tgz#1dd548b0a7bc075f9eae9a305e0eb3a4c40a5c52"
-  integrity sha512-icUSxWKX71hQoxcrSQZZMj8m1C/VlqSzX2SgVLuSeINtKiX9qn8Xk5lSGUvVsCsK37H06L6pSwx1IZTtnyBJ9A==
+"@metaio/worker-model@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@metaio/worker-model/-/worker-model-1.1.1.tgz#4579499a395953c39135142e75e1b1adb174160d"
+  integrity sha512-5gkD0P7/zf2+NNBVieDjl1TqrObbVkXrvj+2It4RMe71JT+1kVQ0A/TMLzvJFwuOspAOqHaGYC972BWy+oCevw==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
