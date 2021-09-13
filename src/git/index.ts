@@ -173,7 +173,16 @@ export class GitService {
 
     await this.copyTemplateFilesIntoRepo(_template, repoPath, rawFileName);
 
-    const _index = await _localRepo.refreshIndex();
+    await this.commitAllChangesWithMessage(_localRepo, 'Initial commit.');
+
+    return _localRepo;
+  }
+
+  async commitAllChangesWithMessage(
+    repo: Repository,
+    msg: string,
+  ): Promise<void> {
+    const _index = await repo.refreshIndex();
     const _addAll = await _index.addAll();
     if (_addAll === 0)
       logger.info(`Successful add all entries to index`, {
@@ -184,18 +193,36 @@ export class GitService {
       logger.info(`Successful write index`, { context: GitService.name });
     const _oId = await _index.writeTree();
 
-    const _commit = await _localRepo.createCommit(
+    const _commit = await repo.createCommit(
       'HEAD',
       this.signature,
       this.signature,
-      'Initial commit.',
+      msg,
       _oId,
       [],
     );
-    logger.info(`Create initial commit with commit hash ${_commit.tostrS()}`, {
+    logger.info(`Create ${msg} with commit hash ${_commit.tostrS()}`, {
       context: GitService.name,
     });
+  }
 
+  async cloneAndCheckoutFromRemote(): Promise<Repository> {
+    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } =
+      this.taskConfig;
+    const repoPath = `${this.baseDir}/${gitReponame}`;
+    const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
+      gitType,
+      gitToken,
+      gitUsername,
+      gitReponame,
+    );
+    const { remoteUrl } = _remoteUrls;
+    logger.info(`Clone repo ${gitReponame} to ${repoPath}`, {
+      context: GitService.name,
+    });
+    const _localRepo = await Git.Clone.clone(remoteUrl, repoPath, {
+      checkoutBranch: gitBranchName,
+    });
     return _localRepo;
   }
 
