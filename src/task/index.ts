@@ -1,12 +1,13 @@
 import { MetaWorker } from '@metaio/worker-model';
 
-import { HttpRequestService } from '../api';
+import { getBackendService } from '../api';
 import { GitService } from '../git';
 import { logger, loggerService } from '../logger';
+import { MixedTaskConfig } from '../types';
 
 export const startGitTask = async (): Promise<void> => {
-  const http = new HttpRequestService();
-  const taskConf = await http.getWorkerTaskFromBackend();
+  const http = getBackendService();
+  const taskConf = await http.getWorkerTaskFromBackend<MixedTaskConfig>();
   if (!taskConf) throw Error('Can not get task config from backend or gateway');
 
   const { taskId, taskMethod } = taskConf;

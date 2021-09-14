@@ -572,6 +572,11 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
+"@metaio/worker-common@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@metaio/worker-common/-/worker-common-1.0.1.tgz#02b4c918039c1dfc92a9b31f277a9c3096f86720"
+  integrity sha512-Ck1F97fBaQe5jQqCbcUlbkwTYa9SWqvQ0pRPM/7cCu3rQfFsxBY2aIjB9Dg6GdKqAietY/DISazAVpZ1sULwQg==
+
 "@metaio/worker-model@1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@metaio/worker-model/-/worker-model-1.1.1.tgz#4579499a395953c39135142e75e1b1adb174160d"

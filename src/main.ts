@@ -1,12 +1,12 @@
 import cron from 'cron';
 import timer from 'timers';
 
-import { HttpRequestService } from './api';
+import { getBackendService } from './api';
 import { logger } from './logger';
 import { startGitTask } from './task';
 
 async function bootstrap(): Promise<void> {
-  const http = new HttpRequestService();
+  const http = getBackendService();
   logger.info('App started');
   await http.reportWorkerTaskStartedToBackend();
 

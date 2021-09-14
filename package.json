@@ -27,6 +27,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@metaio/worker-common": "^1.0.1",
     "@metaio/worker-model": "1.1.1",
     "@octokit/core": "^3.5.1",
     "cron": "^1.8.2",
