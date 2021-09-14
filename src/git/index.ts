@@ -178,6 +178,44 @@ export class GitService {
     return _localRepo;
   }
 
+  async cloneAndCheckoutFromRemote(): Promise<Repository> {
+    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } =
+      this.taskConfig;
+    const repoPath = `${this.baseDir}/${gitReponame}`;
+    const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
+      gitType,
+      gitToken,
+      gitUsername,
+      gitReponame,
+    );
+    const { remoteUrl } = _remoteUrls;
+    logger.info(`Clone repo ${gitReponame} to ${repoPath}`, {
+      context: GitService.name,
+    });
+    const _localRepo = await Git.Clone.clone(remoteUrl, repoPath, {
+      checkoutBranch: gitBranchName,
+    });
+    return _localRepo;
+  }
+
+  async openRepoFromLocal(): Promise<Repository> {
+    const { gitReponame, gitBranchName } = this.taskConfig;
+    const repoPath = `${this.baseDir}/${gitReponame}`;
+    logger.info(`Open repo ${gitReponame} from ${repoPath}`, {
+      context: GitService.name,
+    });
+    const _localRepo = await Git.Repository.open(repoPath);
+    logger.info(`Checkout branch ${gitBranchName}`, {
+      context: GitService.name,
+    });
+    const _ref = await _localRepo.checkoutBranch(gitBranchName);
+    if (_ref.isBranch())
+      logger.info(`Successful checkout branch ${gitBranchName}`, {
+        context: GitService.name,
+      });
+    return _localRepo;
+  }
+
   async commitAllChangesWithMessage(
     repo: Repository,
     msg: string,
@@ -204,26 +242,6 @@ export class GitService {
     logger.info(`Create ${msg} with commit hash ${_commit.tostrS()}`, {
       context: GitService.name,
     });
-  }
-
-  async cloneAndCheckoutFromRemote(): Promise<Repository> {
-    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } =
-      this.taskConfig;
-    const repoPath = `${this.baseDir}/${gitReponame}`;
-    const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
-      gitType,
-      gitToken,
-      gitUsername,
-      gitReponame,
-    );
-    const { remoteUrl } = _remoteUrls;
-    logger.info(`Clone repo ${gitReponame} to ${repoPath}`, {
-      context: GitService.name,
-    });
-    const _localRepo = await Git.Clone.clone(remoteUrl, repoPath, {
-      checkoutBranch: gitBranchName,
-    });
-    return _localRepo;
   }
 
   async pushLocalRepoToRemote(repo: Repository): Promise<void> {

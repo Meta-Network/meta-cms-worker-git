@@ -14,12 +14,40 @@ export const startGitTask = async (): Promise<void> => {
 
   const gitService = new GitService(taskConf);
 
+  if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_CLONE_CHECKOUT) {
+    logger.info(`Starting task cloneAndCheckoutFromRemote`);
+    await gitService.cloneAndCheckoutFromRemote();
+    logger.info(`Task cloneAndCheckoutFromRemote finished`);
+  }
+
+  if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_COMMIT_PUSH) {
+    logger.info(`Starting task openRepoFromLocal`);
+    const repo = await gitService.openRepoFromLocal();
+    logger.info(`Task openRepoFromLocal finished`);
+
+    logger.info(`Starting task commitAllChangesWithMessage`);
+    await gitService.commitAllChangesWithMessage(repo, 'Update');
+    logger.info(`Task commitAllChangesWithMessage finished`);
+
+    logger.info(`Starting task pushLocalRepoToRemote`);
+    await gitService.pushLocalRepoToRemote(repo);
+    logger.info(`Task pushLocalRepoToRemote finished`);
+  }
+
   if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_INIT_PUSH) {
     logger.info(`Starting task createRepoFromTemplate`);
     const repo = await gitService.createRepoFromTemplate();
-    await gitService.pushLocalRepoToRemote(repo);
     logger.info(`Task createRepoFromTemplate finished`);
-    await http.reportWorkerTaskFinishedToBackend();
-    loggerService.final('Task finished');
+
+    logger.info(`Starting task pushLocalRepoToRemote`);
+    await gitService.pushLocalRepoToRemote(repo);
+    logger.info(`Task pushLocalRepoToRemote finished`);
   }
+
+  if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_PUSH) {
+    // TODO: Clone repo and overwrite temlpate files
+  }
+
+  await http.reportWorkerTaskFinishedToBackend();
+  loggerService.final('Task finished');
 };
