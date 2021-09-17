@@ -10,7 +10,8 @@ export const startGitTask = async (): Promise<void> => {
   const taskConf = await http.getWorkerTaskFromBackend<MixedTaskConfig>();
   if (!taskConf) throw Error('Can not get task config from backend or gateway');
 
-  const { taskId, taskMethod } = taskConf;
+  const { task } = taskConf;
+  const { taskId, taskMethod } = task;
   logger.info(`Task id ${taskId} start, method ${taskMethod}`);
 
   const gitService = new GitService(taskConf);

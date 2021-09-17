@@ -23,7 +23,8 @@ type BuildBasicInfoFromTemplateUrl = {
 
 export class GitService {
   constructor(private readonly taskConfig: MixedTaskConfig) {
-    const dirName = taskConfig.taskWorkspace;
+    const { task } = taskConfig;
+    const dirName = task.taskWorkspace;
     logger.info(`Task workspace is ${dirName}`, { context: GitService.name });
 
     const baseDir = `${path.join(os.tmpdir(), dirName)}`;
@@ -136,13 +137,10 @@ export class GitService {
   }
 
   async createRepoFromTemplate(): Promise<Repository> {
-    const {
-      gitType,
-      gitReponame,
-      gitBranchName,
-      templateRepoUrl,
-      templateBranchName,
-    } = this.taskConfig as MetaWorker.Configs.DeployConfig;
+    const { git, template } = this
+      .taskConfig as MetaWorker.Configs.DeployConfig;
+    const { gitType, gitReponame, gitBranchName } = git;
+    const { templateRepoUrl, templateBranchName } = template;
     const repoPath = `${this.baseDir}/${gitReponame}`;
 
     logger.info(`Initialize repo ${gitReponame} to ${repoPath}`, {
@@ -179,8 +177,8 @@ export class GitService {
   }
 
   async cloneAndCheckoutFromRemote(): Promise<Repository> {
-    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } =
-      this.taskConfig;
+    const { git } = this.taskConfig;
+    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
     const repoPath = `${this.baseDir}/${gitReponame}`;
     const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
       gitType,
@@ -199,7 +197,8 @@ export class GitService {
   }
 
   async openRepoFromLocal(): Promise<Repository> {
-    const { gitReponame, gitBranchName } = this.taskConfig;
+    const { git } = this.taskConfig;
+    const { gitReponame, gitBranchName } = git;
     const repoPath = `${this.baseDir}/${gitReponame}`;
     logger.info(`Open repo ${gitReponame} from ${repoPath}`, {
       context: GitService.name,
@@ -245,8 +244,8 @@ export class GitService {
   }
 
   async pushLocalRepoToRemote(repo: Repository): Promise<void> {
-    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } =
-      this.taskConfig;
+    const { git } = this.taskConfig;
+    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
     const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
       gitType,
       gitToken,
