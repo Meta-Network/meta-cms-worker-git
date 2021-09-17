@@ -38,8 +38,7 @@
     "superagent": "^6.1.0",
     "which": "^2.0.2",
     "winston": "^3.3.3",
-    "winston-loki": "^6.0.1",
-    "yaml": "^2.0.0-7"
+    "winston-loki": "^6.0.1"
   },
   "devDependencies": {
     "@types/cron": "^1.7.3",
