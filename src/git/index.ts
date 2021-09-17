@@ -1,3 +1,4 @@
+import { isDeployTask } from '@metaio/worker-common';
 import { MetaWorker } from '@metaio/worker-model';
 import fs from 'fs';
 import fsp from 'fs/promises';
@@ -137,8 +138,9 @@ export class GitService {
   }
 
   async createRepoFromTemplate(): Promise<Repository> {
-    const { git, template } = this
-      .taskConfig as MetaWorker.Configs.DeployConfig;
+    if (!isDeployTask(this.taskConfig))
+      throw new Error(`Task config is not for deploy`);
+    const { git, template } = this.taskConfig;
     const { gitType, gitReponame, gitBranchName } = git;
     const { templateRepoUrl, templateBranchName } = template;
     const repoPath = `${this.baseDir}/${gitReponame}`;
