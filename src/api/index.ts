@@ -11,12 +11,9 @@ export const getBackendService = (): BackendTaskService => {
   if (!secret) throw Error('Can not find WORKER_SECRET env');
   const hostName = config.get<string>('HOSTNAME');
   if (!hostName) throw Error('Can not find HOSTNAME env');
-  const _host = config.get<string>('backend.host');
-  if (!_host) throw Error('Can not find backend host config');
-  const _port = config.get<number>('backend.port');
-  if (!_port) throw Error('Can not find backend port config');
-
-  const backendUrl = `${_host}:${_port}/task/git`;
+  const _backendUrl = config.get<string>('WORKER_BACKEND_URL');
+  if (!_backendUrl) throw Error('Can not find WORKER_BACKEND_URL env');
+  const backendUrl = `${_backendUrl}/task/git`;
 
   const options: BackendTaskServiceOptions = {
     hostName,

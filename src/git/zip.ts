@@ -6,10 +6,9 @@ import { logger } from '../logger';
 
 export class ZipArchiveService {
   constructor() {
-    const bin = config.get<string>('sevenZip.binName');
-
+    const bin = config.get<string>('WORKER_7ZIP_BIN_NAME');
     if (!bin)
-      throw new Error('ZipArchiveService: can not get bin name in config');
+      throw Error('ZipArchiveService: Can not find WORKER_7ZIP_BIN_NAME env');
 
     const path = which.sync(bin);
 

@@ -31,6 +31,7 @@
     "@metaio/worker-model": "1.2.1",
     "@octokit/core": "^3.5.1",
     "cron": "^1.8.2",
+    "dotenv-flow": "^3.2.0",
     "fs-extra": "^10.0.0",
     "node-7z": "^3.0.0",
     "nodegit": "^0.28.0-alpha.9",
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@types/cron": "^1.7.3",
+    "@types/dotenv-flow": "^3.2.0",
     "@types/fs-extra": "^9.0.12",
     "@types/hapi": "^18.0.6",
     "@types/jest": "^26.0.24",

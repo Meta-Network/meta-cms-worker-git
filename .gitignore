@@ -2,7 +2,8 @@
 *.http
 
 # ENV File
-/.env.*
+/.env*
+!/.env.example
 /config.*
 !/config.example.*
 
