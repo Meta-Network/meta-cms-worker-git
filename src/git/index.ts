@@ -209,11 +209,10 @@ export class GitService {
     logger.info(`Checkout branch ${gitBranchName}`, {
       context: GitService.name,
     });
-    const _ref = await _localRepo.checkoutBranch(gitBranchName);
-    if (_ref.isBranch())
-      logger.info(`Successful checkout branch ${gitBranchName}`, {
-        context: GitService.name,
-      });
+    await _localRepo.checkoutBranch(gitBranchName);
+    logger.info(`Successful checkout branch ${gitBranchName}`, {
+      context: GitService.name,
+    });
     return _localRepo;
   }
 
