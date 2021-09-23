@@ -28,7 +28,7 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Task openRepoFromLocal finished`);
 
     logger.info(`Starting task commitAllChangesWithMessage`);
-    await gitService.commitAllChangesWithMessage(repo, 'Update');
+    await gitService.commitAllChangesWithMessage(repo, 'Update', true);
     logger.info(`Task commitAllChangesWithMessage finished`);
 
     logger.info(`Starting task pushLocalRepoToRemote`);
@@ -40,6 +40,10 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Starting task createRepoFromTemplate`);
     const repo = await gitService.createRepoFromTemplate();
     logger.info(`Task createRepoFromTemplate finished`);
+
+    logger.info(`Starting task commitAllChangesWithMessage`);
+    await gitService.commitAllChangesWithMessage(repo, 'Initial Commit');
+    logger.info(`Task commitAllChangesWithMessage finished`);
 
     logger.info(`Starting task pushLocalRepoToRemote`);
     await gitService.pushLocalRepoToRemote(repo);

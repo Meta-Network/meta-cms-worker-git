@@ -173,8 +173,6 @@ export class GitService {
 
     await this.copyTemplateFilesIntoRepo(_template, repoPath, rawFileName);
 
-    await this.commitAllChangesWithMessage(_localRepo, 'Initial commit.');
-
     return _localRepo;
   }
 
@@ -219,17 +217,26 @@ export class GitService {
   async commitAllChangesWithMessage(
     repo: Repository,
     msg: string,
+    withParrent = false,
   ): Promise<void> {
     const _index = await repo.refreshIndex();
     const _addAll = await _index.addAll();
-    if (_addAll === 0)
+    if (_addAll)
       logger.info(`Successful add all entries to index`, {
         context: GitService.name,
       });
     const _writeIndex = await _index.write();
-    if (_writeIndex === 0)
+    if (_writeIndex)
       logger.info(`Successful write index`, { context: GitService.name });
     const _oId = await _index.writeTree();
+
+    const _parents = [];
+    if (withParrent) {
+      const _parent = await repo.getHeadCommit();
+      if (_parent)
+        logger.info(`Successful get head commit`, { context: GitService.name });
+      _parents.push(_parent);
+    }
 
     const _commit = await repo.createCommit(
       'HEAD',
@@ -237,7 +244,7 @@ export class GitService {
       this.signature,
       msg,
       _oId,
-      [],
+      _parents,
     );
     logger.info(`Create ${msg} with commit hash ${_commit.tostrS()}`, {
       context: GitService.name,
@@ -254,7 +261,15 @@ export class GitService {
       gitReponame,
     );
     const { remoteUrl, originUrl } = _remoteUrls;
-    const _remote = await Git.Remote.create(repo, 'origin', remoteUrl);
+
+    let _remote: Git.Remote;
+
+    logger.info(`Lookup repository remote`, { context: GitService.name });
+    _remote = await Git.Remote.lookup(repo, 'origin');
+    const _remoteName = _remote.name();
+    if (!(_remoteName === 'origin')) {
+      _remote = await Git.Remote.create(repo, 'origin', remoteUrl);
+    }
 
     logger.info(
       `Pushing local repository to remote origin ${originUrl}, branch ${gitBranchName}`,
