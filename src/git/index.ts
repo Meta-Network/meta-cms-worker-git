@@ -1,4 +1,4 @@
-import { isDeployTask } from '@metaio/worker-common';
+import { isDeployTask, isPublishTask } from '@metaio/worker-common';
 import { MetaWorker } from '@metaio/worker-model';
 import fs from 'fs';
 import fsp from 'fs/promises';
@@ -137,6 +137,38 @@ export class GitService {
     await fse.copy(_cPath, rPath, { recursive: true, overwrite: true });
   }
 
+  // For publisher
+  private async createNoJekyllFile(
+    workDir: string,
+    disableNoJekyll?: boolean,
+  ): Promise<void> {
+    if (disableNoJekyll) return;
+    const filePath = path.join(this.baseDir, workDir, '.nojekyll');
+    const isExists = fs.existsSync(filePath);
+    if (isExists) return;
+    await fsp.writeFile(filePath, '\n');
+    logger.info(`Successful create .nojekyll file, path: ${filePath}`, {
+      context: GitService.name,
+    });
+  }
+
+  private async createCNameFile(
+    workDir: string,
+    content: string,
+  ): Promise<void> {
+    if (!content) return;
+    const filePath = path.join(this.baseDir, workDir, 'CNAME');
+    const isExists = fs.existsSync(filePath);
+    if (isExists) {
+      logger.info(`CNAME file already exists`, { context: GitService.name });
+      return;
+    }
+    await fsp.writeFile(filePath, `${content}\n`);
+    logger.info(`Successful create CNAME file, path: ${filePath}`, {
+      context: GitService.name,
+    });
+  }
+
   async createRepoFromTemplate(): Promise<Repository> {
     if (!isDeployTask(this.taskConfig))
       throw new Error(`Task config is not for deploy`);
@@ -251,9 +283,15 @@ export class GitService {
     });
   }
 
-  async pushLocalRepoToRemote(repo: Repository): Promise<void> {
+  async pushLocalRepoToRemote(
+    repo: Repository,
+    branch?: string,
+  ): Promise<void> {
     const { git } = this.taskConfig;
     const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
+
+    if (!branch) branch = gitBranchName;
+
     const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
       gitType,
       gitToken,
@@ -272,14 +310,22 @@ export class GitService {
     }
 
     logger.info(
-      `Pushing local repository to remote origin ${originUrl}, branch ${gitBranchName}`,
+      `Pushing local repository to remote origin ${originUrl}, branch ${branch}`,
       { context: GitService.name },
     );
-    await _remote.push([
-      `refs/heads/${gitBranchName}:refs/heads/${gitBranchName}`,
-    ]);
+    await _remote.push([`refs/heads/${branch}:refs/heads/${branch}`]);
     logger.info(`Successfully pushed to ${originUrl}`, {
       context: GitService.name,
     });
+  }
+
+  async publishSiteToGitHubPages(): Promise<void> {
+    if (!isPublishTask(this.taskConfig))
+      throw new Error('Task config is not for publish site');
+    const { site } = this.taskConfig;
+    const { domain } = site;
+    const workDir = 'public'; // TODO: maybe configable
+    await this.createNoJekyllFile(workDir);
+    await this.createCNameFile(workDir, `https://${domain}`);
   }
 }
