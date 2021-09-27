@@ -151,7 +151,7 @@ export class GitService {
       context: GitService.name,
     });
   }
-
+  // For publisher
   private async createCNameFile(
     workDir: string,
     content: string,
@@ -208,7 +208,7 @@ export class GitService {
     return _localRepo;
   }
 
-  async cloneAndCheckoutFromRemote(): Promise<Repository> {
+  async cloneAndCheckoutFromRemote(branch?: string): Promise<Repository> {
     const { git } = this.taskConfig;
     const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
     const repoPath = `${this.baseDir}/${gitReponame}`;
@@ -222,13 +222,14 @@ export class GitService {
     logger.info(`Clone repo ${gitReponame} to ${repoPath}`, {
       context: GitService.name,
     });
+    if (!branch) branch = gitBranchName;
     const _localRepo = await Git.Clone.clone(remoteUrl, repoPath, {
-      checkoutBranch: gitBranchName,
+      checkoutBranch: branch,
     });
     return _localRepo;
   }
 
-  async openRepoFromLocal(): Promise<Repository> {
+  async openRepoFromLocal(branch?: string): Promise<Repository> {
     const { git } = this.taskConfig;
     const { gitReponame, gitBranchName } = git;
     const repoPath = `${this.baseDir}/${gitReponame}`;
@@ -236,11 +237,10 @@ export class GitService {
       context: GitService.name,
     });
     const _localRepo = await Git.Repository.open(repoPath);
-    logger.info(`Checkout branch ${gitBranchName}`, {
-      context: GitService.name,
-    });
-    await _localRepo.checkoutBranch(gitBranchName);
-    logger.info(`Successful checkout branch ${gitBranchName}`, {
+    if (!branch) branch = gitBranchName;
+    logger.info(`Checkout branch ${branch}`, { context: GitService.name });
+    await _localRepo.checkoutBranch(branch);
+    logger.info(`Successful checkout branch ${branch}`, {
       context: GitService.name,
     });
     return _localRepo;
@@ -302,10 +302,17 @@ export class GitService {
 
     let _remote: Git.Remote;
 
-    logger.info(`Lookup repository remote`, { context: GitService.name });
-    _remote = await Git.Remote.lookup(repo, 'origin');
-    const _remoteName = _remote.name();
-    if (!(_remoteName === 'origin')) {
+    try {
+      logger.info(`Lookup repository remote`, { context: GitService.name });
+      _remote = await Git.Remote.lookup(repo, 'origin');
+      const _remoteName = _remote.name();
+      logger.info(`Remote '${_remoteName}' found`, {
+        context: GitService.name,
+      });
+    } catch (error) {
+      logger.info(`Remote 'origin' does not exist, creating remote 'origin'`, {
+        context: GitService.name,
+      });
       _remote = await Git.Remote.create(repo, 'origin', remoteUrl);
     }
 
@@ -319,13 +326,17 @@ export class GitService {
     });
   }
 
-  async publishSiteToGitHubPages(): Promise<void> {
+  async publishSiteToGitHubPages(
+    publishDir: string,
+    publishBranch: string,
+  ): Promise<void> {
     if (!isPublishTask(this.taskConfig))
       throw new Error('Task config is not for publish site');
-    const { site } = this.taskConfig;
-    const { domain } = site;
-    const workDir = 'public'; // TODO: maybe configable
+    const { site, git } = this.taskConfig;
+    const { gitReponame } = git;
+    const workDir = `${gitReponame}/${publishDir}`;
     await this.createNoJekyllFile(workDir);
+    const { domain } = site;
     await this.createCNameFile(workDir, `https://${domain}`);
   }
 }
