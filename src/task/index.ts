@@ -28,7 +28,7 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Task openRepoFromLocal finished`);
 
     logger.info(`Starting task commitAllChangesWithMessage`);
-    await gitService.commitAllChangesWithMessage(repo, 'Update', true);
+    await gitService.commitAllChangesWithMessage(repo, 'Update');
     logger.info(`Task commitAllChangesWithMessage finished`);
 
     logger.info(`Starting task pushLocalRepoToRemote`);

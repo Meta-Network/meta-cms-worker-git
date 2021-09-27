@@ -9,3 +9,7 @@ export type DownloadRepositoryArchiveReturn = {
 export type MixedTaskConfig =
   | MetaWorker.Configs.DeployTaskConfig
   | MetaWorker.Configs.PublishTaskConfig;
+
+export type LogContext = {
+  context: string;
+};
