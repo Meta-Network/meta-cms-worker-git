@@ -54,6 +54,12 @@ export const startGitTask = async (): Promise<void> => {
     // TODO: Clone repo and overwrite temlpate files
   }
 
+  if (taskMethod === MetaWorker.Enums.TaskMethod.PUBLISH_GITHUB_PAGES) {
+    logger.info(`Starting task publishSiteToGitHubPages`);
+    await gitService.publishSiteToGitHubPages();
+    logger.info(`Task publishSiteToGitHubPages finished`);
+  }
+
   await http.reportWorkerTaskFinishedToBackend();
   loggerService.final('Task finished');
 };

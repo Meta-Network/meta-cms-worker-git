@@ -327,19 +327,17 @@ export class GitService {
     logger.info(`Successfully pushed to ${originUrl}`, this.context);
   }
 
-  async publishSiteToGitHubPages(
-    publishDir: string,
-    publishBranch: string,
-  ): Promise<void> {
+  async publishSiteToGitHubPages(): Promise<void> {
     if (!isPublishTask(this.taskConfig))
       throw new Error('Task config is not for publish site');
-    const { site, git } = this.taskConfig;
+    const { publish, site, git } = this.taskConfig;
     const { gitReponame } = git;
+    const { publishDir, publishBranch } = publish;
     const workDir = `${gitReponame}/${publishDir}`;
 
     await this.createNoJekyllFile(workDir);
     const { domain } = site;
-    await this.createCNameFile(workDir, `https://${domain}`);
+    await this.createCNameFile(workDir, domain);
 
     const _repo = await this.initializeRepository(workDir, publishBranch);
     await this.commitAllChangesWithMessage(_repo, `Publish ${Date.now()}`);
