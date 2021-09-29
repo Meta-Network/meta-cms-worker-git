@@ -20,6 +20,10 @@ export class GitHubService {
     let req = 'GET /repos/{owner}/{repo}/zipball';
     if (ref) req = req.concat('/{ref}');
 
+    logger.info(`Start download ${owner}/${repo} zipball from branch ${ref}`, {
+      context: GitHubService.name,
+    });
+
     const _res = await this.octokit.request(req, {
       owner,
       repo,
