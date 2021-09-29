@@ -139,10 +139,10 @@ export class GitService {
   }
 
   private async initializeRepository(
-    path: string,
+    repoName: string,
     branch: string,
   ): Promise<Repository> {
-    const repoPath = `${this.baseDir}/${path}`;
+    const repoPath = `${this.baseDir}/${repoName}`;
     logger.info(`Initialize repository from ${repoPath}`, this.context);
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -191,11 +191,13 @@ export class GitService {
       throw new Error(`Task config is not for deploy`);
     const { git, template } = this.taskConfig;
     const { gitType, gitReponame, gitBranchName } = git;
+
+    const _localRepo = await this.initializeRepository(
+      gitReponame,
+      gitBranchName,
+    );
+
     const { templateRepoUrl, templateBranchName } = template;
-    const repoPath = `${this.baseDir}/${gitReponame}`;
-
-    const _localRepo = await this.initializeRepository(repoPath, gitBranchName);
-
     logger.info(`Download template zip archive from ${templateRepoUrl}`, {
       context: GitService.name,
     });
@@ -212,6 +214,7 @@ export class GitService {
     });
     const _template = await this.decompressTemplateArchive(filePath);
 
+    const repoPath = `${this.baseDir}/${gitReponame}`;
     await this.copyTemplateFilesIntoRepo(_template, repoPath, rawFileName);
 
     return _localRepo;
