@@ -20,6 +20,9 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Starting task cloneAndCheckoutFromRemote`);
     await gitService.cloneAndCheckoutFromRemote();
     logger.info(`Task cloneAndCheckoutFromRemote finished`);
+    logger.info(`Starting task copyThemeToRepo`);
+    await gitService.copyThemeToRepo();
+    logger.info(`Task copyThemeToRepo finished`);
   }
 
   if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_COMMIT_PUSH) {
@@ -52,6 +55,12 @@ export const startGitTask = async (): Promise<void> => {
 
   if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_PUSH) {
     // TODO: Clone repo and overwrite temlpate files
+  }
+
+  if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_THEME) {
+    logger.info(`Starting task copyThemeToRepo`);
+    await gitService.copyThemeToRepo();
+    logger.info(`Task copyThemeToRepo finished`);
   }
 
   if (taskMethod === MetaWorker.Enums.TaskMethod.PUBLISH_GITHUB_PAGES) {

@@ -232,11 +232,18 @@ export class GitService {
   }
 
   async copyThemeToRepo(): Promise<void> {
-    if (!isDeployTask(this.taskConfig))
-      throw new Error(`Task config is not for deploy`);
+    if (!isDeployTask(this.taskConfig)) {
+      logger.info(`Task config is not for deploy, skip.`);
+      return;
+    }
     const { theme, git } = this.taskConfig;
     const { gitType, gitReponame } = git;
-    const { themeRepo, themeBranch, themeName } = theme;
+    const { themeRepo, themeBranch, themeName, themeType, isPackage } = theme;
+
+    if (isPackage) {
+      logger.info(`This theme has npm package, skip.`);
+      return;
+    }
 
     // Use download instead of Git clone cause `libgit2` not support clone depth
     // see https://github.com/libgit2/libgit2/issues/3058
@@ -252,12 +259,17 @@ export class GitService {
     logger.info(`Decompress theme archive ${filePath}`, this.context);
     const _theme = await this.decompressRepositoryArchive(filePath);
 
-    const themePath = `${this.baseDir}/${gitReponame}/themes/${themeName}`;
-    logger.info(`Create theme directory ${themePath}`, this.context);
-    await fsp.mkdir(themePath, { recursive: true });
+    let _themeDirName = 'theme';
+    if (themeType === MetaWorker.Enums.TemplateType.HEXO) {
+      _themeDirName = 'themes';
+    }
 
-    logger.info(`Copy theme files to ${themePath}`, this.context);
-    await this.copyDecompressedFilesIntoRepo(_theme, themePath, findStr);
+    const _themePath = `${this.baseDir}/${gitReponame}/${_themeDirName}/${themeName}`;
+    logger.info(`Create theme directory ${_themePath}`, this.context);
+    await fsp.mkdir(_themePath, { recursive: true });
+
+    logger.info(`Copy theme files to ${_themePath}`, this.context);
+    await this.copyDecompressedFilesIntoRepo(_theme, _themePath, findStr);
   }
 
   async cloneAndCheckoutFromRemote(branch?: string): Promise<Repository> {
