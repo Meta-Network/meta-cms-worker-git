@@ -3,7 +3,7 @@ import { MetaWorker } from '@metaio/worker-model';
 export type DownloadRepositoryArchiveReturn = {
   filePath: string;
   fileName: string;
-  rawFileName: string;
+  findStr: string;
 };
 
 export type MixedTaskConfig =

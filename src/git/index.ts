@@ -102,18 +102,24 @@ export class GitService {
     type: MetaWorker.Enums.GitServiceType,
     url: string,
     branch?: string,
+    file?: string,
   ): Promise<DownloadRepositoryArchiveReturn> {
     const { owner, repo } = await this.buildBasicInfoFromGitUrl(type, url);
 
     if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const github = new GitHubService(this.baseDir);
-      return await github.downloadRepositoryArchive(owner, repo, branch);
+      return await github.downloadRepositoryArchive(owner, repo, branch, file);
     }
     // TODO: Unsupport type
   }
 
   private async decompressRepositoryArchive(path: string): Promise<string> {
     const output = `${this.baseDir}/temp`;
+    const isExists = fs.existsSync(output);
+    if (isExists) {
+      logger.info(`Output path ${output} exists, remove it.`, this.context);
+      fs.rmSync(output, { recursive: true });
+    }
 
     const zip = new ZipArchiveService();
 
@@ -123,15 +129,18 @@ export class GitService {
   private async copyDecompressedFilesIntoRepo(
     tPath: string,
     rPath: string,
-    rawName?: string,
+    findStr?: string,
   ): Promise<void> {
     let _cPath = tPath.replace(path.extname(tPath), '');
     logger.info(`Decompressed directory is ${_cPath}`, this.context);
 
-    if (rawName) {
-      const files = await fsp.readdir(_cPath);
-      const rawNameNoExt = path.basename(rawName, path.extname(rawName));
-      if (files.includes(rawNameNoExt)) _cPath = `${_cPath}/${rawNameNoExt}`;
+    if (findStr) {
+      const files = await fsp.readdir(_cPath, { withFileTypes: true });
+      const dirs = files
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
+      const findDir = dirs.find((name) => name.includes(findStr));
+      if (findDir) _cPath = `${_cPath}/${findDir}`;
     }
 
     logger.info(
@@ -201,26 +210,54 @@ export class GitService {
     );
 
     const { templateRepoUrl, templateBranchName } = template;
-    logger.info(`Download template zip archive from ${templateRepoUrl}`, {
-      context: GitService.name,
-    });
+    logger.info(
+      `Download template zip archive from ${templateRepoUrl}`,
+      this.context,
+    );
     const _archive = await this.downloadArchiveFromGitUrl(
       gitType,
       templateRepoUrl,
       templateBranchName,
     );
 
-    const { filePath, rawFileName } = _archive;
+    const { filePath, findStr } = _archive;
 
-    logger.info(`Decompress template archive ${filePath}`, {
-      context: GitService.name,
-    });
+    logger.info(`Decompress template archive ${filePath}`, this.context);
     const _template = await this.decompressRepositoryArchive(filePath);
 
     const repoPath = `${this.baseDir}/${gitReponame}`;
-    await this.copyDecompressedFilesIntoRepo(_template, repoPath, rawFileName);
+    await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
 
     return _localRepo;
+  }
+
+  async copyThemeToRepo(): Promise<void> {
+    if (!isDeployTask(this.taskConfig))
+      throw new Error(`Task config is not for deploy`);
+    const { theme, git } = this.taskConfig;
+    const { gitType, gitReponame } = git;
+    const { themeRepo, themeBranch, themeName } = theme;
+
+    // Use download instead of Git clone cause `libgit2` not support clone depth
+    // see https://github.com/libgit2/libgit2/issues/3058
+    logger.info(`Download theme zip archive from ${themeRepo}`, this.context);
+    const _archive = await this.downloadArchiveFromGitUrl(
+      gitType,
+      themeRepo,
+      themeBranch,
+      'theme.zip',
+    );
+
+    const { filePath, findStr } = _archive;
+    logger.info(`Decompress theme archive ${filePath}`, this.context);
+    const _theme = await this.decompressRepositoryArchive(filePath);
+
+    const themePath = `${this.baseDir}/${gitReponame}/themes/${themeName}`;
+    logger.info(`Create theme directory ${themePath}`, this.context);
+    await fsp.mkdir(themePath, { recursive: true });
+
+    logger.info(`Copy theme files to ${themePath}`, this.context);
+    await this.copyDecompressedFilesIntoRepo(_theme, themePath, findStr);
   }
 
   async cloneAndCheckoutFromRemote(branch?: string): Promise<Repository> {

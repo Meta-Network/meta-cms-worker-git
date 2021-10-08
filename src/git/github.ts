@@ -37,6 +37,13 @@ export class GitHubService {
       'attachment; filename=',
       '',
     );
+    // rawFindName is unreliable,
+    // for repo https://github.com/zoeingwingkei/frame.git,
+    // rawFindName is zoeingwingkei-frame-v1.0-2-g1305c4b.zip
+    // but inside the zip file, a subfolder name is zoeingwingkei-frame-1305c4
+    logger.info(`Raw file name is ${rawFileName}`, {
+      context: GitHubService.name,
+    });
 
     logger.info(`Downloading file from ${_res.url}`, {
       context: GitHubService.name,
@@ -49,6 +56,9 @@ export class GitHubService {
       context: GitHubService.name,
     });
 
-    return { fileName, filePath, rawFileName };
+    const findStr = `${owner}-${repo}`;
+    logger.info(`Find string is ${findStr}`, { context: GitHubService.name });
+
+    return { fileName, filePath, findStr };
   }
 }
