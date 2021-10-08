@@ -50,7 +50,7 @@ export class GitService {
   private readonly baseDir: string;
   private readonly signature: Signature;
 
-  private async buildRemoteHttpUrl(
+  private async buildRemoteGitUrl(
     type: MetaWorker.Enums.GitServiceType,
     uname: string,
     rname: string,
@@ -63,14 +63,14 @@ export class GitService {
     // TODO: Unsupport type
   }
 
-  private async buildRemoteHttpUrlWithToken(
+  private async buildRemoteGitUrlWithToken(
     type: MetaWorker.Enums.GitServiceType,
     token: string,
     uname: string,
     rname: string,
   ): Promise<BuildRemoteHttpUrlWithTokenReturn> {
     if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      const originUrl = await this.buildRemoteHttpUrl(type, uname, rname);
+      const originUrl = await this.buildRemoteGitUrl(type, uname, rname);
       const pass = 'x-oauth-basic';
       const result = {
         originUrl,
@@ -84,7 +84,7 @@ export class GitService {
     // TODO: Unsupport type
   }
 
-  private async buildBasicInfoFromTemplateUrl(
+  private async buildBasicInfoFromGitUrl(
     type: MetaWorker.Enums.GitServiceType,
     url: string,
   ): Promise<BuildBasicInfoFromTemplateUrl> {
@@ -98,12 +98,12 @@ export class GitService {
     // TODO: Unsupport type
   }
 
-  private async downloadTemplateFromUrl(
+  private async downloadArchiveFromGitUrl(
     type: MetaWorker.Enums.GitServiceType,
     url: string,
     branch?: string,
   ): Promise<DownloadRepositoryArchiveReturn> {
-    const { owner, repo } = await this.buildBasicInfoFromTemplateUrl(type, url);
+    const { owner, repo } = await this.buildBasicInfoFromGitUrl(type, url);
 
     if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
       const github = new GitHubService(this.baseDir);
@@ -112,21 +112,21 @@ export class GitService {
     // TODO: Unsupport type
   }
 
-  private async decompressTemplateArchive(path: string): Promise<string> {
-    const output = `${this.baseDir}/template`;
+  private async decompressRepositoryArchive(path: string): Promise<string> {
+    const output = `${this.baseDir}/temp`;
 
     const zip = new ZipArchiveService();
 
     return await zip.extractAllFiles(path, output);
   }
 
-  private async copyTemplateFilesIntoRepo(
+  private async copyDecompressedFilesIntoRepo(
     tPath: string,
     rPath: string,
     rawName?: string,
   ): Promise<void> {
     let _cPath = tPath.replace(path.extname(tPath), '');
-    logger.info(`Template directory is ${_cPath}`, this.context);
+    logger.info(`Decompressed directory is ${_cPath}`, this.context);
 
     if (rawName) {
       const files = await fsp.readdir(_cPath);
@@ -134,7 +134,10 @@ export class GitService {
       if (files.includes(rawNameNoExt)) _cPath = `${_cPath}/${rawNameNoExt}`;
     }
 
-    logger.info(`Copy template files from ${_cPath} to ${rPath}`, this.context);
+    logger.info(
+      `Copy decompressed files from ${_cPath} to ${rPath}`,
+      this.context,
+    );
     await fse.copy(_cPath, rPath, { recursive: true, overwrite: true });
   }
 
@@ -201,7 +204,7 @@ export class GitService {
     logger.info(`Download template zip archive from ${templateRepoUrl}`, {
       context: GitService.name,
     });
-    const _archive = await this.downloadTemplateFromUrl(
+    const _archive = await this.downloadArchiveFromGitUrl(
       gitType,
       templateRepoUrl,
       templateBranchName,
@@ -212,10 +215,10 @@ export class GitService {
     logger.info(`Decompress template archive ${filePath}`, {
       context: GitService.name,
     });
-    const _template = await this.decompressTemplateArchive(filePath);
+    const _template = await this.decompressRepositoryArchive(filePath);
 
     const repoPath = `${this.baseDir}/${gitReponame}`;
-    await this.copyTemplateFilesIntoRepo(_template, repoPath, rawFileName);
+    await this.copyDecompressedFilesIntoRepo(_template, repoPath, rawFileName);
 
     return _localRepo;
   }
@@ -224,7 +227,7 @@ export class GitService {
     const { git } = this.taskConfig;
     const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
     const repoPath = `${this.baseDir}/${gitReponame}`;
-    const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
+    const _remoteUrls = await this.buildRemoteGitUrlWithToken(
       gitType,
       gitToken,
       gitUsername,
@@ -297,7 +300,7 @@ export class GitService {
 
     if (!branch) branch = gitBranchName;
 
-    const _remoteUrls = await this.buildRemoteHttpUrlWithToken(
+    const _remoteUrls = await this.buildRemoteGitUrlWithToken(
       gitType,
       gitToken,
       gitUsername,

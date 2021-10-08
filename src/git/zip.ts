@@ -39,7 +39,7 @@ export class ZipArchiveService {
         res(output);
       });
       stream.on('error', (err) => {
-        logger.error('7zip::decompressTemplateArchive', err, {
+        logger.error('7zip::extractAllFiles', err, {
           context: ZipArchiveService.name,
         });
         rej(err);
