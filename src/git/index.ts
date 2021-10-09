@@ -60,7 +60,7 @@ export class GitService {
       logger.info(`Git remote url is: ${remoteUrl}`, this.context);
       return remoteUrl;
     }
-    // TODO: Unsupport type
+    throw new Error(`Unsupport type ${type}`);
   }
 
   private async buildRemoteGitUrlWithToken(
@@ -81,7 +81,7 @@ export class GitService {
       };
       return result;
     }
-    // TODO: Unsupport type
+    throw new Error(`Unsupport type ${type}`);
   }
 
   private async buildBasicInfoFromGitUrl(
@@ -95,7 +95,7 @@ export class GitService {
         .split('/');
       return { owner: info[0], repo: info[1] };
     }
-    // TODO: Unsupport type
+    throw new Error(`Unsupport type ${type}`);
   }
 
   private async downloadArchiveFromGitUrl(
@@ -110,7 +110,7 @@ export class GitService {
       const github = new GitHubService(this.baseDir);
       return await github.downloadRepositoryArchive(owner, repo, branch, file);
     }
-    // TODO: Unsupport type
+    throw new Error(`Unsupport type ${type}`);
   }
 
   private async decompressRepositoryArchive(path: string): Promise<string> {
