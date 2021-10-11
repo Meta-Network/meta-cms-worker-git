@@ -1,3 +1,4 @@
+import { checkAllowedTasks } from '@metaio/worker-common';
 import { MetaWorker } from '@metaio/worker-model';
 
 import { getBackendService } from '../api';
@@ -6,6 +7,15 @@ import { logger, loggerService } from '../logger';
 import { MixedTaskConfig } from '../types';
 
 export const startGitTask = async (): Promise<void> => {
+  const allowedTasks: MetaWorker.Enums.TaskMethod[] = [
+    MetaWorker.Enums.TaskMethod.GIT_CLONE_CHECKOUT,
+    MetaWorker.Enums.TaskMethod.GIT_COMMIT_PUSH,
+    MetaWorker.Enums.TaskMethod.GIT_INIT_PUSH,
+    // MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_PUSH,
+    MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_THEME,
+    MetaWorker.Enums.TaskMethod.PUBLISH_GITHUB_PAGES,
+  ];
+
   const http = getBackendService();
   const taskConf = await http.getWorkerTaskFromBackend<MixedTaskConfig>();
   if (!taskConf) throw Error('Can not get task config from backend or gateway');
@@ -13,6 +23,8 @@ export const startGitTask = async (): Promise<void> => {
   const { task } = taskConf;
   const { taskId, taskMethod } = task;
   logger.info(`Task id ${taskId} start, method ${taskMethod}`);
+
+  checkAllowedTasks(taskMethod, allowedTasks);
 
   const gitService = new GitService(taskConf);
 

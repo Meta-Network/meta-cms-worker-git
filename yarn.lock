@@ -572,10 +572,10 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
-"@metaio/worker-common@1.3.1":
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/@metaio/worker-common/-/worker-common-1.3.1.tgz#32326b6949011db957f596bbd47f489253962743"
-  integrity sha512-XjEakmY19WwfCwJt0IR7DlAj//p9mJiWlHS7u0t8exNIyh8dJq2LcOvnDtSBAXV/QJeaPh4ofAqaJ6D6AZazdA==
+"@metaio/worker-common@1.3.2":
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/@metaio/worker-common/-/worker-common-1.3.2.tgz#c98e613a296827ceef4b2432700da438a4672d22"
+  integrity sha512-+cNPVNOXibVO93+6oNInktO5Ipr1pETkeqV9xj7viMbaCXSmAgsCqpinR/oep+tdKAN1tPeKgIOgF2b5gZSLsg==
   dependencies:
     lodash.get "^4.4.2"
     lodash.has "^4.5.2"
