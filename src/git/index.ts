@@ -170,7 +170,9 @@ export class GitService {
     disableNoJekyll?: boolean,
   ): Promise<void> {
     if (disableNoJekyll) return;
-    const filePath = path.join(this.baseDir, workDir, '.nojekyll');
+    const workPath = path.join(this.baseDir, workDir);
+    await fsp.mkdir(workPath, { recursive: true });
+    const filePath = path.join(workPath, '.nojekyll');
     const isExists = fs.existsSync(filePath);
     if (isExists) return;
     await fsp.writeFile(filePath, '\n');
@@ -185,6 +187,8 @@ export class GitService {
     content: string,
   ): Promise<void> {
     if (!content) return;
+    const workPath = path.join(this.baseDir, workDir);
+    await fsp.mkdir(workPath, { recursive: true });
     const filePath = path.join(this.baseDir, workDir, 'CNAME');
     const isExists = fs.existsSync(filePath);
     if (isExists) {
