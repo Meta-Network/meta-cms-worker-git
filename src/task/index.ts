@@ -66,7 +66,21 @@ export const startGitTask = async (): Promise<void> => {
   }
 
   if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_PUSH) {
-    // TODO: Clone repo and overwrite temlpate files
+    logger.info(`Starting task cloneAndCheckoutFromRemote`);
+    const _repo = await gitService.cloneAndCheckoutFromRemote();
+    logger.info(`Task cloneAndCheckoutFromRemote finished`);
+
+    logger.info(`Starting task replaceRepoTemplate`);
+    await gitService.replaceRepoTemplate();
+    logger.info(`Task replaceRepoTemplate finished`);
+
+    logger.info(`Starting task commitAllChangesWithMessage`);
+    await gitService.commitAllChangesWithMessage(_repo, 'Change template');
+    logger.info(`Task commitAllChangesWithMessage finished`);
+
+    logger.info(`Starting task pushLocalRepoToRemote`);
+    await gitService.pushLocalRepoToRemote(_repo);
+    logger.info(`Task pushLocalRepoToRemote finished`);
   }
 
   if (taskMethod === MetaWorker.Enums.TaskMethod.GIT_OVERWRITE_THEME) {

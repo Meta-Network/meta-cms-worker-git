@@ -115,11 +115,7 @@ export class GitService {
 
   private async decompressRepositoryArchive(path: string): Promise<string> {
     const output = `${this.baseDir}/temp`;
-    const isExists = fs.existsSync(output);
-    if (isExists) {
-      logger.info(`Output path ${output} exists, remove it.`, this.context);
-      fs.rmSync(output, { recursive: true });
-    }
+    await this.removeIfPathExists(output);
 
     const zip = new ZipArchiveService();
 
@@ -162,6 +158,14 @@ export class GitService {
       flags: 16, // 1u << 4, https://github.com/nodegit/libgit2/blob/a807e37df4ca3f60df7e9675e3c8049a21dd6283/include/git2/repository.h#L256
       initialHead: branch,
     });
+  }
+
+  private async removeIfPathExists(path: string): Promise<void> {
+    const isExists = fs.existsSync(path);
+    if (isExists) {
+      logger.info(`Path ${path} exists, remove it.`, this.context);
+      fs.rmSync(path, { recursive: true });
+    }
   }
 
   // For publisher
@@ -235,6 +239,66 @@ export class GitService {
     return _localRepo;
   }
 
+  async replaceRepoTemplate(): Promise<void> {
+    if (!isDeployTask(this.taskConfig))
+      throw new Error(`Task config is not for deploy`);
+
+    const { git, template } = this.taskConfig;
+    const { gitType, gitReponame } = git;
+    const repoPath = path.join(this.baseDir, gitReponame);
+
+    // Backup source folder
+    const sourceName = 'source'; // TODO: a function can get source name by TemplateType
+    const sourcePath = path.join(repoPath, sourceName);
+    const backupPath = path.join(this.baseDir, 'backup', sourceName);
+    logger.info(`Backup ${sourcePath} to ${backupPath}`, this.context);
+    await fse.copy(sourcePath, backupPath, {
+      recursive: true,
+      overwrite: true,
+    });
+
+    // Remove all files except .git folder
+    const files = await fsp.readdir(repoPath);
+    files.forEach((name) => {
+      if (name !== '.git') {
+        const removePath = path.join(repoPath, name);
+        logger.info(`Remove path ${removePath}`, this.context);
+        fs.rmSync(removePath, { recursive: true });
+      }
+    });
+
+    // Download new template
+    const { templateRepoUrl, templateBranchName } = template;
+    logger.info(
+      `Download template zip archive from ${templateRepoUrl}`,
+      this.context,
+    );
+    const _archive = await this.downloadArchiveFromGitUrl(
+      gitType,
+      templateRepoUrl,
+      templateBranchName,
+    );
+
+    // Decompress and copy files
+    const { filePath, findStr } = _archive;
+    logger.info(`Decompress template archive ${filePath}`, this.context);
+    const _template = await this.decompressRepositoryArchive(filePath);
+    await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
+
+    // Remove template source folder
+    await this.removeIfPathExists(sourcePath);
+
+    // Restore original source folder
+    logger.info(
+      `Restore backup from ${backupPath} to ${sourcePath}`,
+      this.context,
+    );
+    await fse.copy(backupPath, sourcePath, {
+      recursive: true,
+      overwrite: true,
+    });
+  }
+
   async copyThemeToRepo(): Promise<void> {
     if (!isDeployTask(this.taskConfig)) {
       logger.info(`Task config is not for deploy, skip.`);
@@ -280,6 +344,7 @@ export class GitService {
     const { git } = this.taskConfig;
     const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
     const repoPath = `${this.baseDir}/${gitReponame}`;
+    await this.removeIfPathExists(repoPath);
     const _remoteUrls = await this.buildRemoteGitUrlWithToken(
       gitType,
       gitToken,
