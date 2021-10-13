@@ -34,7 +34,7 @@ export class GitService {
     const dirName = task.taskWorkspace;
     logger.info(`Task workspace is ${dirName}`, this.context);
 
-    const baseDir = `${path.join(os.tmpdir(), dirName)}`;
+    const baseDir = path.join(os.tmpdir(), dirName);
     fs.mkdirSync(baseDir, { recursive: true });
     logger.info(
       `Git temporary directory is created, path: ${baseDir}`,
@@ -113,13 +113,15 @@ export class GitService {
     throw new Error(`Unsupport type ${type}`);
   }
 
-  private async decompressRepositoryArchive(path: string): Promise<string> {
-    const output = `${this.baseDir}/temp`;
+  private async decompressRepositoryArchive(
+    archivePath: string,
+  ): Promise<string> {
+    const output = path.join(this.baseDir, 'temp');
     await this.removeIfPathExists(output);
 
     const zip = new ZipArchiveService();
 
-    return await zip.extractAllFiles(path, output);
+    return await zip.extractAllFiles(archivePath, output);
   }
 
   private async copyDecompressedFilesIntoRepo(
@@ -136,7 +138,7 @@ export class GitService {
         .filter((dirent) => dirent.isDirectory())
         .map((dirent) => dirent.name);
       const findDir = dirs.find((name) => name.includes(findStr));
-      if (findDir) _cPath = `${_cPath}/${findDir}`;
+      if (findDir) _cPath = path.join(_cPath, findDir);
     }
 
     logger.info(
@@ -150,7 +152,7 @@ export class GitService {
     repoName: string,
     branch: string,
   ): Promise<Repository> {
-    const repoPath = `${this.baseDir}/${repoName}`;
+    const repoPath = path.join(this.baseDir, repoName);
     logger.info(`Initialize repository from ${repoPath}`, this.context);
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -233,7 +235,7 @@ export class GitService {
     logger.info(`Decompress template archive ${filePath}`, this.context);
     const _template = await this.decompressRepositoryArchive(filePath);
 
-    const repoPath = `${this.baseDir}/${gitReponame}`;
+    const repoPath = path.join(this.baseDir, gitReponame);
     await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
 
     return _localRepo;
@@ -332,7 +334,12 @@ export class GitService {
       _themeDirName = 'themes';
     }
 
-    const _themePath = `${this.baseDir}/${gitReponame}/${_themeDirName}/${themeName}`;
+    const _themePath = path.join(
+      this.baseDir,
+      gitReponame,
+      _themeDirName,
+      themeName,
+    );
     logger.info(`Create theme directory ${_themePath}`, this.context);
     await fsp.mkdir(_themePath, { recursive: true });
 
@@ -343,7 +350,7 @@ export class GitService {
   async cloneAndCheckoutFromRemote(branch?: string): Promise<Repository> {
     const { git } = this.taskConfig;
     const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
-    const repoPath = `${this.baseDir}/${gitReponame}`;
+    const repoPath = path.join(this.baseDir, gitReponame);
     await this.removeIfPathExists(repoPath);
     const _remoteUrls = await this.buildRemoteGitUrlWithToken(
       gitType,
@@ -363,7 +370,7 @@ export class GitService {
   async openRepoFromLocal(branch?: string): Promise<Repository> {
     const { git } = this.taskConfig;
     const { gitReponame, gitBranchName } = git;
-    const repoPath = `${this.baseDir}/${gitReponame}`;
+    const repoPath = path.join(this.baseDir, gitReponame);
     logger.info(`Open repo ${gitReponame} from ${repoPath}`, this.context);
     const _localRepo = await Git.Repository.open(repoPath);
     if (!branch) branch = gitBranchName;

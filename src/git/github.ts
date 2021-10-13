@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/core';
 import fs from 'fs/promises';
+import path from 'path';
 
 import { logger } from '../logger';
 import { DownloadRepositoryArchiveReturn } from '../types';
@@ -50,7 +51,7 @@ export class GitHubService {
     });
 
     const fileName = file;
-    const filePath = `${this.tmpDir}/${fileName}`;
+    const filePath = path.join(this.tmpDir, fileName);
     await fs.writeFile(filePath, Buffer.from(_res.data));
     logger.info(`File ${filePath} download complete`, {
       context: GitHubService.name,
