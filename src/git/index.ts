@@ -26,6 +26,11 @@ type BuildBasicInfoFromTemplateUrl = {
   repo: string;
 };
 
+type SpecificFrameworkInfo = {
+  themeDirName: string;
+  sourceDirName: string;
+};
+
 export class GitService {
   constructor(private readonly taskConfig: MixedTaskConfig) {
     this.context = { context: GitService.name };
@@ -170,6 +175,20 @@ export class GitService {
     }
   }
 
+  private async getSpecificFrameworkInfoByTemplateType(
+    type: MetaWorker.Enums.TemplateType,
+  ): Promise<SpecificFrameworkInfo> {
+    if (type === MetaWorker.Enums.TemplateType.HEXO) {
+      return {
+        themeDirName: 'themes',
+        sourceDirName: 'source',
+      };
+    }
+    throw new Error(
+      `getSpecificFrameworkInfoByTemplateType: Unsupported type ${type}`,
+    );
+  }
+
   // For publisher
   private async createNoJekyllFile(
     workDir: string,
@@ -247,10 +266,14 @@ export class GitService {
 
     const { git, template } = this.taskConfig;
     const { gitType, gitReponame } = git;
+    const { templateRepoUrl, templateBranchName, templateType } = template;
     const repoPath = path.join(this.baseDir, gitReponame);
 
     // Backup source folder
-    const sourceName = 'source'; // TODO: a function can get source name by TemplateType
+    const _frameworkInfo = await this.getSpecificFrameworkInfoByTemplateType(
+      templateType,
+    );
+    const sourceName = _frameworkInfo.sourceDirName;
     const sourcePath = path.join(repoPath, sourceName);
     const backupPath = path.join(this.baseDir, 'backup', sourceName);
     logger.info(`Backup ${sourcePath} to ${backupPath}`, this.context);
@@ -270,7 +293,6 @@ export class GitService {
     });
 
     // Download new template
-    const { templateRepoUrl, templateBranchName } = template;
     logger.info(
       `Download template zip archive from ${templateRepoUrl}`,
       this.context,
@@ -329,10 +351,10 @@ export class GitService {
     logger.info(`Decompress theme archive ${filePath}`, this.context);
     const _theme = await this.decompressRepositoryArchive(filePath);
 
-    let _themeDirName = 'theme';
-    if (themeType === MetaWorker.Enums.TemplateType.HEXO) {
-      _themeDirName = 'themes';
-    }
+    const _frameworkInfo = await this.getSpecificFrameworkInfoByTemplateType(
+      themeType,
+    );
+    const _themeDirName = _frameworkInfo.themeDirName;
 
     const _themePath = path.join(
       this.baseDir,
