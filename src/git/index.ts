@@ -395,10 +395,15 @@ export class GitService {
     const repoPath = path.join(this.baseDir, gitReponame);
     logger.info(`Open repo ${gitReponame} from ${repoPath}`, this.context);
     const _localRepo = await Git.Repository.open(repoPath);
+    const _branch = await _localRepo.getCurrentBranch();
+    const _branchName = _branch.shorthand();
+    logger.info(`Current branch is ${_branchName}`, this.context);
     if (!branch) branch = gitBranchName;
-    logger.info(`Checkout branch ${branch}`, this.context);
-    await _localRepo.checkoutBranch(branch);
-    logger.info(`Successful checkout branch ${branch}`, this.context);
+    if (branch !== _branchName) {
+      logger.info(`Checkout branch ${branch}`, this.context);
+      await _localRepo.checkoutBranch(branch);
+      logger.info(`Successful checkout branch ${branch}`, this.context);
+    }
     return _localRepo;
   }
 
