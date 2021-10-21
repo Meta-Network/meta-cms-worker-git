@@ -17,7 +17,7 @@
     "start:dev": "node-dev --respawn src/main.ts",
     "start:debug": "DEBUG=* node-dev --respawn src/main.ts",
     "start:debug:docker": "DEBUG=* ts-node src/main.ts",
-    "start:prod": "NODE_ENV='production' node dist/main.js",
+    "start:prod": "NODE_ENV='production' node --enable-source-maps dist/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
