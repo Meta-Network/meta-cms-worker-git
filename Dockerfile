@@ -1,7 +1,10 @@
 FROM ghcr.io/biscuittin/node:14-impish AS builder
 WORKDIR /opt/MetaNetwork/Worker-Git
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 COPY . .
-RUN yarn install --frozen-lockfile && yarn run build
+RUN yarn run build
+RUN npm prune --production
 
 FROM ghcr.io/biscuittin/node:14-impish
 ENV SEVENZIP_VERSION=2103
@@ -20,7 +23,6 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
   && ln -s /opt/7z/7zz /usr/local/bin/7zz \
   && 7zz
 WORKDIR /opt/MetaNetwork/Worker-Git
-COPY --from=builder /opt/MetaNetwork/Worker-Git/package.json /opt/MetaNetwork/Worker-Git/yarn.lock ./
-COPY --from=builder /opt/MetaNetwork/Worker-Git/dist/ dist/
-RUN yarn install --production --frozen-lockfile
+COPY --from=builder /opt/MetaNetwork/Worker-Git/dist ./dist
+COPY --from=builder /opt/MetaNetwork/Worker-Git/node_modules ./node_modules
 CMD ["--enable-source-maps","dist/main.js"]
