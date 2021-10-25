@@ -6,6 +6,7 @@ import fse from 'fs-extra';
 import Git, { Repository, Signature } from 'nodegit';
 import os from 'os';
 import path from 'path';
+import yaml from 'yaml';
 
 import { logger } from '../logger';
 import {
@@ -35,7 +36,7 @@ export class GitService {
   constructor(private readonly taskConfig: MixedTaskConfig) {
     this.context = { context: GitService.name };
 
-    const { task } = taskConfig;
+    const { task } = this.taskConfig;
     const dirName = task.taskWorkspace;
     logger.info(`Task workspace is ${dirName}`, this.context);
 
@@ -189,6 +190,27 @@ export class GitService {
     );
   }
 
+  private async createMetaSpaceConfigFile(
+    config: MetaWorker.Configs.DeployConfig,
+    repoPath: string,
+  ): Promise<void> {
+    const fileName = 'meta-space-config.yml';
+    const { user, site, theme } = config;
+    const metaSpaceConfig: MetaWorker.Configs.MetaSpaceConfig = {
+      user,
+      site,
+      theme,
+    };
+    const filePath = path.join(repoPath, fileName);
+    const yamlStr = yaml.stringify(metaSpaceConfig);
+    const data = new Uint8Array(Buffer.from(yamlStr));
+    await fsp.writeFile(filePath, data, { encoding: 'utf8' });
+    logger.info(
+      `Successful create ${fileName} file, path: ${filePath}`,
+      this.context,
+    );
+  }
+
   // For publisher
   private async createNoJekyllFile(
     workDir: string,
@@ -257,6 +279,8 @@ export class GitService {
     const repoPath = path.join(this.baseDir, gitReponame);
     await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
 
+    await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
+
     return _localRepo;
   }
 
@@ -321,6 +345,9 @@ export class GitService {
       recursive: true,
       overwrite: true,
     });
+
+    // Create meta space config file
+    await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
   }
 
   async copyThemeToRepo(): Promise<void> {
