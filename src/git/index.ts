@@ -529,4 +529,12 @@ export class GitService {
     // Use force push
     await this.pushLocalRepoToRemote(_repo, publishBranch, true);
   }
+
+  async generateMetaSpaceConfig(): Promise<void> {
+    if (!isDeployTask(this.taskConfig))
+      throw new Error(`Task config is not for deploy`);
+    const { git } = this.taskConfig;
+    const repoPath = path.join(this.baseDir, git.gitReponame);
+    await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
+  }
 }
