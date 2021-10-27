@@ -97,24 +97,9 @@ export const startGitTask = async (): Promise<void> => {
   }
 
   if (taskMethod === MetaWorker.Enums.TaskMethod.GENERATE_METASPACE_CONFIG) {
-    logger.info(`Starting task cloneAndCheckoutFromRemote`);
-    const _repo = await gitService.cloneAndCheckoutFromRemote();
-    logger.info(`Task cloneAndCheckoutFromRemote finished`);
-
     logger.info(`Starting task generateMetaSpaceConfig`);
     await gitService.generateMetaSpaceConfig();
     logger.info(`Task generateMetaSpaceConfig finished`);
-
-    logger.info(`Starting task commitAllChangesWithMessage`);
-    await gitService.commitAllChangesWithMessage(
-      _repo,
-      'Generate MetaSpace config',
-    );
-    logger.info(`Task commitAllChangesWithMessage finished`);
-
-    logger.info(`Starting task pushLocalRepoToRemote`);
-    await gitService.pushLocalRepoToRemote(_repo);
-    logger.info(`Task pushLocalRepoToRemote finished`);
   }
 
   await http.reportWorkerTaskFinishedToBackend();
