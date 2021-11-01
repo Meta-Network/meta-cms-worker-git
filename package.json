@@ -1,6 +1,6 @@
 {
   "name": "meta-cms-worker-git",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "CMS Worker for Git",
   "author": "",
   "private": true,
