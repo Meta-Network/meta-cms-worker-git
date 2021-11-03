@@ -567,19 +567,19 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
-"@metaio/worker-common@1.6.1":
-  version "1.6.1"
-  resolved "https://registry.yarnpkg.com/@metaio/worker-common/-/worker-common-1.6.1.tgz#2e97a1673947ed5626e3eabd88201d044a53b863"
-  integrity sha512-sJ9jW0dc5QrswppINTudQ5VYhCLJmzZquCTz0iK+EknIJcJS/ViDqOEN+tU/IjNcIewaIYe3Ei0LDVL3F7TcGg==
+"@metaio/worker-common@1.6.2":
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/@metaio/worker-common/-/worker-common-1.6.2.tgz#3e766d3d56644f655bfd9bc46ab07c4fa7d9a79b"
+  integrity sha512-5Zy/BCTOk91AG8pEIEdxIsTfcT+1SzbV8tK5ojQ3Speu0vKl6FVj1T0iS7a6jTJEPoI3yRUI/JHr+vfCC4SVxw==
   dependencies:
     lodash.get "^4.4.2"
     lodash.has "^4.5.2"
     lodash.set "^4.3.2"
 
-"@metaio/worker-model@1.6.0":
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/@metaio/worker-model/-/worker-model-1.6.0.tgz#0c9e53fa010b319a556a380e2c79386803858e98"
-  integrity sha512-104VZMuyKuqXNsn4ZF7R5ONPqY1NBKyArcOqkNuWswvyGPgiMayAxdjqjG3muGtcS1oKFYVbBSH/9ljeLz9f0g==
+"@metaio/worker-model@1.6.2":
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/@metaio/worker-model/-/worker-model-1.6.2.tgz#9733ab11557cdd26769b1ba2371b61c5e31905bd"
+  integrity sha512-yxj4vABlrlJmgDCd+xYANBlcOUhYH/7bgExTSdCFBU7X0oR4gKmI9d5XsCLiwt6UT3+Z1CHHhGgmCUE2dBm44A==
 
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
