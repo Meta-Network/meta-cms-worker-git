@@ -48,7 +48,7 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Task commitAllChangesWithMessage finished`);
 
     logger.info(`Starting task pushLocalRepoToRemote`);
-    await gitService.pushLocalRepoToRemote(repo);
+    await gitService.pushLocalRepoToRemote(repo, taskConf.git.storage);
     logger.info(`Task pushLocalRepoToRemote finished`);
   }
 
@@ -62,7 +62,7 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Task commitAllChangesWithMessage finished`);
 
     logger.info(`Starting task pushLocalRepoToRemote`);
-    await gitService.pushLocalRepoToRemote(repo);
+    await gitService.pushLocalRepoToRemote(repo, taskConf.git.storage);
     logger.info(`Task pushLocalRepoToRemote finished`);
   }
 
@@ -80,7 +80,7 @@ export const startGitTask = async (): Promise<void> => {
     logger.info(`Task commitAllChangesWithMessage finished`);
 
     logger.info(`Starting task pushLocalRepoToRemote`);
-    await gitService.pushLocalRepoToRemote(_repo);
+    await gitService.pushLocalRepoToRemote(_repo, taskConf.git.storage);
     logger.info(`Task pushLocalRepoToRemote finished`);
   }
 

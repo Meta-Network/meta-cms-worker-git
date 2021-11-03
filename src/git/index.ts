@@ -253,13 +253,13 @@ export class GitService {
   async createRepoFromTemplate(): Promise<Repository> {
     if (!isDeployTask(this.taskConfig))
       throw new Error(`Task config is not for deploy`);
-    const { git, template } = this.taskConfig;
-    const { gitType, gitReponame, gitBranchName } = git;
+    const {
+      git: { storage },
+      template,
+    } = this.taskConfig;
+    const { reponame, branchName, serviceType } = storage;
 
-    const _localRepo = await this.initializeRepository(
-      gitReponame,
-      gitBranchName,
-    );
+    const _localRepo = await this.initializeRepository(reponame, branchName);
 
     const { templateRepoUrl, templateBranchName } = template;
     logger.info(
@@ -267,7 +267,7 @@ export class GitService {
       this.context,
     );
     const _archive = await this.downloadArchiveFromGitUrl(
-      gitType,
+      serviceType,
       templateRepoUrl,
       templateBranchName,
     );
@@ -277,7 +277,7 @@ export class GitService {
     logger.info(`Decompress template archive ${filePath}`, this.context);
     const _template = await this.decompressRepositoryArchive(filePath);
 
-    const repoPath = path.join(this.baseDir, gitReponame);
+    const repoPath = path.join(this.baseDir, reponame);
     await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
 
     await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
@@ -289,10 +289,13 @@ export class GitService {
     if (!isDeployTask(this.taskConfig))
       throw new Error(`Task config is not for deploy`);
 
-    const { git, template } = this.taskConfig;
-    const { gitType, gitReponame } = git;
+    const {
+      git: { storage },
+      template,
+    } = this.taskConfig;
+    const { serviceType, reponame } = storage;
     const { templateRepoUrl, templateBranchName, templateType } = template;
-    const repoPath = path.join(this.baseDir, gitReponame);
+    const repoPath = path.join(this.baseDir, reponame);
 
     // Backup source folder
     const _frameworkInfo = await this.getSpecificFrameworkInfoByTemplateType(
@@ -323,7 +326,7 @@ export class GitService {
       this.context,
     );
     const _archive = await this.downloadArchiveFromGitUrl(
-      gitType,
+      serviceType,
       templateRepoUrl,
       templateBranchName,
     );
@@ -356,8 +359,11 @@ export class GitService {
       logger.info(`Task config is not for deploy, skip.`);
       return;
     }
-    const { theme, git } = this.taskConfig;
-    const { gitType, gitReponame } = git;
+    const {
+      theme,
+      git: { storage },
+    } = this.taskConfig;
+    const { serviceType, reponame } = storage;
     const { themeRepo, themeBranch, themeName, themeType, isPackage } = theme;
 
     if (isPackage) {
@@ -369,7 +375,7 @@ export class GitService {
     // see https://github.com/libgit2/libgit2/issues/3058
     logger.info(`Download theme zip archive from ${themeRepo}`, this.context);
     const _archive = await this.downloadArchiveFromGitUrl(
-      gitType,
+      serviceType,
       themeRepo,
       themeBranch,
       'theme.zip',
@@ -386,7 +392,7 @@ export class GitService {
 
     const _themePath = path.join(
       this.baseDir,
-      gitReponame,
+      reponame,
       _themeDirName,
       themeName,
     );
@@ -398,19 +404,21 @@ export class GitService {
   }
 
   async cloneAndCheckoutFromRemote(branch?: string): Promise<Repository> {
-    const { git } = this.taskConfig;
-    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
-    const repoPath = path.join(this.baseDir, gitReponame);
+    const {
+      git: { storage },
+    } = this.taskConfig;
+    const { serviceType, token, username, reponame, branchName } = storage;
+    const repoPath = path.join(this.baseDir, reponame);
     await this.removeIfPathExists(repoPath);
     const _remoteUrls = await this.buildRemoteGitUrlWithToken(
-      gitType,
-      gitToken,
-      gitUsername,
-      gitReponame,
+      serviceType,
+      token,
+      username,
+      reponame,
     );
     const { remoteUrl } = _remoteUrls;
-    logger.info(`Clone repo ${gitReponame} to ${repoPath}`, this.context);
-    if (!branch) branch = gitBranchName;
+    logger.info(`Clone repo ${reponame} to ${repoPath}`, this.context);
+    if (!branch) branch = branchName;
     const _localRepo = await Git.Clone.clone(remoteUrl, repoPath, {
       checkoutBranch: branch,
     });
@@ -418,15 +426,17 @@ export class GitService {
   }
 
   async openRepoFromLocal(branch?: string): Promise<Repository> {
-    const { git } = this.taskConfig;
-    const { gitReponame, gitBranchName } = git;
-    const repoPath = path.join(this.baseDir, gitReponame);
-    logger.info(`Open repo ${gitReponame} from ${repoPath}`, this.context);
+    const {
+      git: { storage },
+    } = this.taskConfig;
+    const { reponame, branchName } = storage;
+    const repoPath = path.join(this.baseDir, reponame);
+    logger.info(`Open repo ${reponame} from ${repoPath}`, this.context);
     const _localRepo = await Git.Repository.open(repoPath);
     const _branch = await _localRepo.getCurrentBranch();
     const _branchName = _branch.shorthand();
     logger.info(`Current branch is ${_branchName}`, this.context);
-    if (!branch) branch = gitBranchName;
+    if (!branch) branch = branchName;
     if (branch !== _branchName) {
       logger.info(`Checkout branch ${branch}`, this.context);
       await _localRepo.checkoutBranch(branch);
@@ -472,19 +482,19 @@ export class GitService {
 
   async pushLocalRepoToRemote(
     repo: Repository,
+    info: MetaWorker.Info.Git,
     branch?: string,
     force?: boolean,
   ): Promise<void> {
-    const { git } = this.taskConfig;
-    const { gitType, gitToken, gitUsername, gitReponame, gitBranchName } = git;
+    const { serviceType, token, username, reponame, branchName } = info;
 
-    if (!branch) branch = gitBranchName;
+    if (!branch) branch = branchName;
 
     const _remoteUrls = await this.buildRemoteGitUrlWithToken(
-      gitType,
-      gitToken,
-      gitUsername,
-      gitReponame,
+      serviceType,
+      token,
+      username,
+      reponame,
     );
     const { remoteUrl, originUrl } = _remoteUrls;
 
@@ -516,10 +526,14 @@ export class GitService {
   async publishSiteToGitHubPages(): Promise<void> {
     if (!isPublishTask(this.taskConfig))
       throw new Error('Task config is not for publish site');
-    const { publish, site, git } = this.taskConfig;
-    const { gitReponame } = git;
+    const {
+      publish,
+      site,
+      git: { publisher },
+    } = this.taskConfig;
+    const { reponame } = publisher;
     const { publishDir, publishBranch } = publish;
-    const workDir = `${gitReponame}/${publishDir}`;
+    const workDir = `${reponame}/${publishDir}`;
 
     await this.createNoJekyllFile(workDir);
     const { domain } = site;
@@ -528,14 +542,16 @@ export class GitService {
     const _repo = await this.initializeRepository(workDir, publishBranch);
     await this.commitAllChangesWithMessage(_repo, `Publish ${Date.now()}`);
     // Use force push
-    await this.pushLocalRepoToRemote(_repo, publishBranch, true);
+    await this.pushLocalRepoToRemote(_repo, publisher, publishBranch, true);
   }
 
   async generateMetaSpaceConfig(): Promise<void> {
     if (!isDeployTask(this.taskConfig))
       throw new Error(`Task config is not for deploy`);
-    const { git } = this.taskConfig;
-    const repoPath = path.join(this.baseDir, git.gitReponame);
+    const {
+      git: { storage },
+    } = this.taskConfig;
+    const repoPath = path.join(this.baseDir, storage.reponame);
     await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
   }
 }
