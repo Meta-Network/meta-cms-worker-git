@@ -529,9 +529,9 @@ export class GitService {
     const {
       publish,
       site,
-      git: { publisher },
+      git: { publisher, storage },
     } = this.taskConfig;
-    const { reponame } = publisher;
+    const { reponame } = storage;
     const { publishDir, publishBranch } = publish;
     const workDir = `${reponame}/${publishDir}`;
 
