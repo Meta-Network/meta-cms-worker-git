@@ -16,8 +16,8 @@ import {
   LogContext,
   MixedTaskConfig,
 } from '../types';
-import { GiteeService } from './gitee';
-import { GitHubService } from './github';
+import { GiteeService } from './services/gitee';
+import { GitHubService } from './services/github';
 import { ZipArchiveService } from './zip';
 
 type SpecificFrameworkInfo = {

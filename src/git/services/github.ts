@@ -2,14 +2,28 @@ import { Octokit } from '@octokit/core';
 import fs from 'fs/promises';
 import path from 'path';
 
-import { logger } from '../logger';
+import { logger } from '../../logger';
 import {
   BuildBasicInfoFromTemplateUrl,
   BuildRemoteHttpUrlWithTokenReturn,
   DownloadRepositoryArchiveReturn,
-} from '../types';
+} from '../../types';
 
 export class GitHubService {
+  public static async getServerUrl(): Promise<URL> {
+    return new URL('https://github.com');
+  }
+
+  public static async getFetchUrl(
+    owner: string,
+    repo: string,
+  ): Promise<string> {
+    const serviceUrl = await this.getServerUrl();
+    const encodedOwner = encodeURIComponent(owner);
+    const encodedRepo = encodeURIComponent(repo);
+    return `${serviceUrl.origin}/${encodedOwner}/${encodedRepo}.git`;
+  }
+
   constructor(private readonly tmpDir: string) {
     this.octokit = new Octokit();
   }

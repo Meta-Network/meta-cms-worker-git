@@ -1,10 +1,26 @@
-import { logger } from '../logger';
+import { URL } from 'url';
+
+import { logger } from '../../logger';
 import {
   BuildBasicInfoFromTemplateUrl,
   BuildRemoteHttpUrlWithTokenReturn,
-} from '../types';
+} from '../../types';
 
 export class GiteeService {
+  public static async getServerUrl(): Promise<URL> {
+    return new URL('https://gitee.com');
+  }
+
+  public static async getFetchUrl(
+    owner: string,
+    repo: string,
+  ): Promise<string> {
+    const serviceUrl = await this.getServerUrl();
+    const encodedOwner = encodeURIComponent(owner);
+    const encodedRepo = encodeURIComponent(repo);
+    return `${serviceUrl.origin}/${encodedOwner}/${encodedRepo}.git`;
+  }
+
   public static async buildRemoteGitUrl(
     owner: string,
     repo: string,
