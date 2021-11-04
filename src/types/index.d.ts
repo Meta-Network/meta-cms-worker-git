@@ -13,3 +13,13 @@ export type MixedTaskConfig =
 export type LogContext = {
   context: string;
 };
+
+export type BuildRemoteHttpUrlWithTokenReturn = {
+  originUrl: string;
+  remoteUrl: string;
+};
+
+export type BuildBasicInfoFromTemplateUrl = {
+  owner: string;
+  repo: string;
+};

@@ -3,7 +3,11 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { logger } from '../logger';
-import { DownloadRepositoryArchiveReturn } from '../types';
+import {
+  BuildBasicInfoFromTemplateUrl,
+  BuildRemoteHttpUrlWithTokenReturn,
+  DownloadRepositoryArchiveReturn,
+} from '../types';
 
 export class GitHubService {
   constructor(private readonly tmpDir: string) {
@@ -12,7 +16,7 @@ export class GitHubService {
 
   private readonly octokit: Octokit;
 
-  async downloadRepositoryArchive(
+  public async downloadRepositoryArchive(
     owner: string,
     repo: string,
     ref?: string,
@@ -61,5 +65,42 @@ export class GitHubService {
     logger.info(`Find string is ${findStr}`, { context: GitHubService.name });
 
     return { fileName, filePath, findStr };
+  }
+
+  public static async buildRemoteGitUrl(
+    owner: string,
+    repo: string,
+  ): Promise<string> {
+    const remoteUrl = `https://github.com/${owner}/${repo}.git`;
+    logger.info(`Git remote url is: ${remoteUrl}`, this.constructor.name);
+    return remoteUrl;
+  }
+
+  public static async buildRemoteGitUrlWithToken(
+    token: string,
+    owner: string,
+    repo: string,
+  ): Promise<BuildRemoteHttpUrlWithTokenReturn> {
+    const originUrl = await this.buildRemoteGitUrl(owner, repo);
+    const pass = 'x-oauth-basic';
+    const remoteUrl = originUrl.replace(
+      'github.com',
+      `${token}:${pass}@github.com`,
+    );
+    const result = {
+      originUrl,
+      remoteUrl,
+    };
+    return result;
+  }
+
+  public static async buildBasicInfoFromGitUrl(
+    url: string,
+  ): Promise<BuildBasicInfoFromTemplateUrl> {
+    const info = url
+      .replace('https://github.com/', '')
+      .replace('.git', '')
+      .split('/');
+    return { owner: info[0], repo: info[1] };
   }
 }

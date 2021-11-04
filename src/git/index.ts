@@ -10,22 +10,15 @@ import yaml from 'yaml';
 
 import { logger } from '../logger';
 import {
+  BuildBasicInfoFromTemplateUrl,
+  BuildRemoteHttpUrlWithTokenReturn,
   DownloadRepositoryArchiveReturn,
   LogContext,
   MixedTaskConfig,
 } from '../types';
+import { GiteeService } from './gitee';
 import { GitHubService } from './github';
 import { ZipArchiveService } from './zip';
-
-type BuildRemoteHttpUrlWithTokenReturn = {
-  originUrl: string;
-  remoteUrl: string;
-};
-
-type BuildBasicInfoFromTemplateUrl = {
-  owner: string;
-  repo: string;
-};
 
 type SpecificFrameworkInfo = {
   themeDirName: string;
@@ -56,19 +49,6 @@ export class GitService {
   private readonly baseDir: string;
   private readonly signature: Signature;
 
-  private async buildRemoteGitUrl(
-    type: MetaWorker.Enums.GitServiceType,
-    uname: string,
-    rname: string,
-  ): Promise<string> {
-    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      const remoteUrl = `https://github.com/${uname}/${rname}.git`;
-      logger.info(`Git remote url is: ${remoteUrl}`, this.context);
-      return remoteUrl;
-    }
-    throw new Error(`Unsupport type ${type}`);
-  }
-
   private async buildRemoteGitUrlWithToken(
     type: MetaWorker.Enums.GitServiceType,
     token: string,
@@ -76,16 +56,14 @@ export class GitService {
     rname: string,
   ): Promise<BuildRemoteHttpUrlWithTokenReturn> {
     if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      const originUrl = await this.buildRemoteGitUrl(type, uname, rname);
-      const pass = 'x-oauth-basic';
-      const result = {
-        originUrl,
-        remoteUrl: originUrl.replace(
-          'github.com',
-          `${token}:${pass}@github.com`,
-        ),
-      };
-      return result;
+      return await GitHubService.buildRemoteGitUrlWithToken(
+        token,
+        uname,
+        rname,
+      );
+    }
+    if (type === MetaWorker.Enums.GitServiceType.GITEE) {
+      return await GiteeService.buildRemoteGitUrlWithToken(token, uname, rname);
     }
     throw new Error(`Unsupport type ${type}`);
   }
@@ -95,11 +73,10 @@ export class GitService {
     url: string,
   ): Promise<BuildBasicInfoFromTemplateUrl> {
     if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      const info = url
-        .replace('https://github.com/', '')
-        .replace('.git', '')
-        .split('/');
-      return { owner: info[0], repo: info[1] };
+      return await GitHubService.buildBasicInfoFromGitUrl(url);
+    }
+    if (type === MetaWorker.Enums.GitServiceType.GITEE) {
+      return await GiteeService.buildBasicInfoFromGitUrl(url);
     }
     throw new Error(`Unsupport type ${type}`);
   }
