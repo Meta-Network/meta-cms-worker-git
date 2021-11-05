@@ -2,8 +2,8 @@ import { isDeployTask, isPublishTask } from '@metaio/worker-common';
 import { MetaWorker } from '@metaio/worker-model';
 import fs from 'fs';
 import fsp from 'fs/promises';
-import fse from 'fs-extra';
-import Git, { Repository, Signature } from 'nodegit';
+import { copy } from 'fs-extra';
+import Git, { Repository } from 'nodegit';
 import os from 'os';
 import path from 'path';
 import yaml from 'yaml';
@@ -13,9 +13,12 @@ import {
   BuildBasicInfoFromTemplateUrl,
   BuildRemoteHttpUrlWithTokenReturn,
   DownloadRepositoryArchiveReturn,
+  GitAuthor,
   LogContext,
   MixedTaskConfig,
 } from '../types';
+import { createAuthHelper } from './helpers/auth';
+import { createCommandHelper, IGitCommandHelper } from './helpers/command';
 import { GiteeService } from './services/gitee';
 import { GitHubService } from './services/github';
 import { ZipArchiveService } from './zip';
@@ -29,11 +32,12 @@ export class GitService {
   constructor(private readonly taskConfig: MixedTaskConfig) {
     this.context = { context: GitService.name };
 
-    const { task } = this.taskConfig;
-    const dirName = task.taskWorkspace;
-    logger.info(`Task workspace is ${dirName}`, this.context);
+    const {
+      task: { taskWorkspace },
+    } = this.taskConfig;
+    logger.info(`Task workspace is ${taskWorkspace}`, this.context);
 
-    const baseDir = path.join(os.tmpdir(), dirName);
+    const baseDir = path.join(os.tmpdir(), taskWorkspace);
     fs.mkdirSync(baseDir, { recursive: true });
     logger.info(
       `Git temporary directory is created, path: ${baseDir}`,
@@ -42,12 +46,13 @@ export class GitService {
 
     this.baseDir = baseDir;
 
-    this.signature = Git.Signature.now('Meta Network', 'noreply@meta.io');
+    this.gitAuthor = { name: 'Meta Network', email: 'noreply@meta.io' };
   }
 
   private readonly context: LogContext;
+  /** A path start with os temp directory, e.g: /tmp/workspace */
   private readonly baseDir: string;
-  private readonly signature: Signature;
+  private readonly gitAuthor: GitAuthor;
 
   private async buildRemoteGitUrlWithToken(
     type: MetaWorker.Enums.GitServiceType,
@@ -128,21 +133,78 @@ export class GitService {
       `Copy decompressed files from ${_cPath} to ${rPath}`,
       this.context,
     );
-    await fse.copy(_cPath, rPath, { recursive: true, overwrite: true });
+    await copy(_cPath, rPath, { recursive: true, overwrite: true });
+  }
+
+  private async getRemoteUrl(gitInfo: MetaWorker.Info.Git): Promise<string> {
+    const { serviceType, username, reponame } = gitInfo;
+    if (serviceType === MetaWorker.Enums.GitServiceType.GITHUB) {
+      return GitHubService.getFetchUrl(username, reponame);
+    }
+    if (serviceType === MetaWorker.Enums.GitServiceType.GITEE) {
+      return GiteeService.getFetchUrl(username, reponame);
+    }
+    throw new Error(`Unsupport type ${serviceType}`);
   }
 
   private async initializeRepository(
-    repoName: string,
-    branch: string,
-  ): Promise<Repository> {
-    const repoPath = path.join(this.baseDir, repoName);
-    logger.info(`Initialize repository from ${repoPath}`, this.context);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    return await Git.Repository.initExt(repoPath, {
-      flags: 16, // 1u << 4, https://github.com/nodegit/libgit2/blob/a807e37df4ca3f60df7e9675e3c8049a21dd6283/include/git2/repository.h#L256
-      initialHead: branch,
-    });
+    gitInfo: MetaWorker.Info.Git,
+  ): Promise<IGitCommandHelper> {
+    const { reponame, branchName } = gitInfo;
+    const repoPath = path.join(this.baseDir, reponame);
+    // Create repo dir
+    await fsp.mkdir(repoPath, { recursive: true });
+    logger.info(
+      `Initialize git repository to ${repoPath}, branch ${branchName}`,
+      this.context,
+    );
+    const git = await createCommandHelper(repoPath);
+    await git.init(branchName);
+    return git;
+  }
+
+  private async openRepository(
+    gitInfo: MetaWorker.Info.Git,
+  ): Promise<IGitCommandHelper> {
+    const { reponame } = gitInfo;
+    const repoPath = path.join(this.baseDir, reponame);
+    if (!fs.existsSync(repoPath)) {
+      throw new Error(
+        `Can not open git repository, path ${repoPath} not exists.`,
+      );
+    }
+    logger.info(`Open git repository from ${repoPath}`, this.context);
+    return await createCommandHelper(repoPath);
+  }
+
+  private async addAllChanges(git: IGitCommandHelper): Promise<void> {
+    await git.addAll();
+  }
+
+  private async commitWithMessage(
+    git: IGitCommandHelper,
+    msg: string,
+  ): Promise<void> {
+    await git.commit(msg, this.gitAuthor);
+  }
+
+  private async setRepositoryRemote(
+    git: IGitCommandHelper,
+    gitInfo: MetaWorker.Info.Git,
+    remote = 'origin',
+  ): Promise<void> {
+    logger.info(`Lookup repository remote`, this.context);
+    const remotes = await git.remoteShow();
+    if (remotes.includes(remote)) {
+      logger.info(`Previous remote '${remote}' found, remove it`, this.context);
+      await git.remoteRemove(remote);
+    }
+    const remoteUrl = await this.getRemoteUrl(gitInfo);
+    logger.info(
+      `Add repository remote '${remote}', url: ${remoteUrl}`,
+      this.context,
+    );
+    await git.remoteAdd(remote, remoteUrl);
   }
 
   private async removeIfPathExists(path: string): Promise<void> {
@@ -196,9 +258,8 @@ export class GitService {
     disableNoJekyll?: boolean,
   ): Promise<void> {
     if (disableNoJekyll) return;
-    const workPath = path.join(this.baseDir, workDir);
-    await fsp.mkdir(workPath, { recursive: true });
-    const filePath = path.join(workPath, '.nojekyll');
+    await fsp.mkdir(workDir, { recursive: true });
+    const filePath = path.join(workDir, '.nojekyll');
     const isExists = fs.existsSync(filePath);
     if (isExists) return;
     await fsp.writeFile(filePath, '\n');
@@ -213,9 +274,8 @@ export class GitService {
     content: string,
   ): Promise<void> {
     if (!content) return;
-    const workPath = path.join(this.baseDir, workDir);
-    await fsp.mkdir(workPath, { recursive: true });
-    const filePath = path.join(this.baseDir, workDir, 'CNAME');
+    await fsp.mkdir(workDir, { recursive: true });
+    const filePath = path.join(workDir, 'CNAME');
     const isExists = fs.existsSync(filePath);
     if (isExists) {
       logger.info(`CNAME file already exists`, this.context);
@@ -228,16 +288,16 @@ export class GitService {
     );
   }
 
-  async createRepoFromTemplate(): Promise<Repository> {
+  public async createRepoFromTemplate(): Promise<IGitCommandHelper> {
     if (!isDeployTask(this.taskConfig))
       throw new Error(`Task config is not for deploy`);
     const {
       git: { storage },
       template,
     } = this.taskConfig;
-    const { reponame, branchName, serviceType } = storage;
+    const { reponame, serviceType } = storage;
 
-    const _localRepo = await this.initializeRepository(reponame, branchName);
+    const git = await this.initializeRepository(storage);
 
     const { templateRepoUrl, templateBranchName } = template;
     logger.info(
@@ -249,18 +309,15 @@ export class GitService {
       templateRepoUrl,
       templateBranchName,
     );
-
     const { filePath, findStr } = _archive;
-
     logger.info(`Decompress template archive ${filePath}`, this.context);
     const _template = await this.decompressRepositoryArchive(filePath);
 
     const repoPath = path.join(this.baseDir, reponame);
     await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
-
     await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
 
-    return _localRepo;
+    return git;
   }
 
   async replaceRepoTemplate(): Promise<void> {
@@ -283,7 +340,7 @@ export class GitService {
     const sourcePath = path.join(repoPath, sourceName);
     const backupPath = path.join(this.baseDir, 'backup', sourceName);
     logger.info(`Backup ${sourcePath} to ${backupPath}`, this.context);
-    await fse.copy(sourcePath, backupPath, {
+    await copy(sourcePath, backupPath, {
       recursive: true,
       overwrite: true,
     });
@@ -323,7 +380,7 @@ export class GitService {
       `Restore backup from ${backupPath} to ${sourcePath}`,
       this.context,
     );
-    await fse.copy(backupPath, sourcePath, {
+    await copy(backupPath, sourcePath, {
       recursive: true,
       overwrite: true,
     });
@@ -423,85 +480,39 @@ export class GitService {
     return _localRepo;
   }
 
-  async commitAllChangesWithMessage(
-    repo: Repository,
+  public async commitAllChangesWithMessage(
+    git: IGitCommandHelper,
     msg: string,
   ): Promise<void> {
-    const _index = await repo.refreshIndex();
-    const _addAll = await _index.addAll();
-    logger.info(
-      `Successful add all entries to index, code: ${_addAll}`,
-      this.context,
-    );
-    const _writeIndex = await _index.write();
-    logger.info(`Successful write index, code: ${_writeIndex}`, this.context);
-    const _oId = await _index.writeTree();
-
-    const _parents = [];
-    const _parent = await repo.getHeadCommit();
-    if (_parent !== null) {
-      logger.info(`Successful get parent commit`, this.context);
-      _parents.push(_parent);
-    }
-
-    const _commit = await repo.createCommit(
-      'HEAD',
-      this.signature,
-      this.signature,
-      msg,
-      _oId,
-      _parents,
-    );
-    logger.info(
-      `Create ${msg} with commit hash ${_commit.tostrS()}`,
-      this.context,
-    );
+    await this.addAllChanges(git);
+    await this.commitWithMessage(git, msg);
+    logger.info(`Commit all changes with message ${msg}`, this.context);
   }
 
-  async pushLocalRepoToRemote(
-    repo: Repository,
+  public async pushLocalRepoToRemote(
+    git: IGitCommandHelper,
     info: MetaWorker.Info.Git,
     branch?: string,
     force?: boolean,
   ): Promise<void> {
-    const { serviceType, token, username, reponame, branchName } = info;
+    const auth = createAuthHelper(git, info);
+    await auth.configureAuth();
 
+    await this.setRepositoryRemote(git, info);
+
+    const { branchName } = info;
     if (!branch) branch = branchName;
 
-    const _remoteUrls = await this.buildRemoteGitUrlWithToken(
-      serviceType,
-      token,
-      username,
-      reponame,
-    );
-    const { remoteUrl, originUrl } = _remoteUrls;
-
-    let _remote: Git.Remote;
-
-    try {
-      logger.info(`Lookup repository remote`, this.context);
-      _remote = await Git.Remote.lookup(repo, 'origin');
-      const _remoteName = _remote.name();
-      logger.info(`Remote '${_remoteName}' found`, this.context);
-    } catch (error) {
-      logger.info(
-        `Remote 'origin' does not exist, creating remote 'origin'`,
-        this.context,
-      );
-      _remote = await Git.Remote.create(repo, 'origin', remoteUrl);
-    }
-
     logger.info(
-      `Pushing local repository to remote origin ${originUrl}, branch ${branch}`,
+      `Pushing local repository to remote 'origin', branch ${branch}`,
       this.context,
     );
-    await _remote.push([
-      `${force ? '+' : ''}refs/heads/${branch}:refs/heads/${branch}`,
-    ]);
-    logger.info(`Successfully pushed to ${originUrl}`, this.context);
+    await git.push('origin', branch, force);
+
+    await auth.removeAuth();
   }
 
-  async publishSiteToGitHubPages(): Promise<void> {
+  public async publishSiteToGitHubPages(): Promise<void> {
     if (!isPublishTask(this.taskConfig))
       throw new Error('Task config is not for publish site');
     const {
@@ -509,21 +520,23 @@ export class GitService {
       site,
       git: { publisher, storage },
     } = this.taskConfig;
-    const { reponame } = storage;
     const { publishDir, publishBranch } = publish;
-    const workDir = `${reponame}/${publishDir}`;
-
+    const workDir = path.join(this.baseDir, storage.reponame, publishDir);
     await this.createNoJekyllFile(workDir);
-    const { domain } = site;
-    await this.createCNameFile(workDir, domain);
+    await this.createCNameFile(workDir, site.domain);
 
-    const _repo = await this.initializeRepository(workDir, publishBranch);
-    await this.commitAllChangesWithMessage(_repo, `Publish ${Date.now()}`);
+    const publishGitInfo: MetaWorker.Info.Git = {
+      ...publisher,
+      reponame: path.join(storage.reponame, publishDir), // storageReponame/publishDir
+      branchName: publishBranch,
+    };
+    const git = await this.initializeRepository(publishGitInfo);
+    await this.commitAllChangesWithMessage(git, `Publish ${Date.now()}`);
     // Use force push
-    await this.pushLocalRepoToRemote(_repo, publisher, publishBranch, true);
+    await this.pushLocalRepoToRemote(git, publisher, publishBranch, true);
   }
 
-  async generateMetaSpaceConfig(): Promise<void> {
+  public async generateMetaSpaceConfig(): Promise<void> {
     if (!isDeployTask(this.taskConfig))
       throw new Error(`Task config is not for deploy`);
     const {

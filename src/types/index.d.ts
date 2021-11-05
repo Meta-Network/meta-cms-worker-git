@@ -23,3 +23,8 @@ export type BuildBasicInfoFromTemplateUrl = {
   owner: string;
   repo: string;
 };
+
+export type GitAuthor = {
+  name: string;
+  email: string;
+};

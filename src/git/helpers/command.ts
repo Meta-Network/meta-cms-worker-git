@@ -3,12 +3,34 @@ import process from 'process';
 
 import { logger } from '../../logger';
 import { LogContext } from '../../types';
+import { escape } from '../utils';
 
 export interface IGitCommandHelper {
+  add(pattern: string): Promise<void>;
+  addAll(): Promise<void>;
+  branchCurrent(): Promise<string>;
+  branchList(location?: 'local' | 'remote' | 'all'): Promise<string[]>;
+  checkout(branch: string, force?: boolean): Promise<void>;
+  clone(repoUrl: string, branch?: string, depth?: number): Promise<void>;
+  commit(
+    message: string,
+    author?: { name: string; email: string },
+  ): Promise<void>;
   config(configKey: string, configValue: string, add?: boolean): Promise<void>;
+  configExists(configKey: string): Promise<boolean>;
+  configUnset(configKey: string): Promise<boolean>;
+  getWorkingDirectory(): string;
   init(branchName?: string): Promise<void>;
+  push(remoteName?: string, branch?: string, force?: boolean): Promise<void>;
+  remoteAdd(remoteName: string, remoteUrl: string): Promise<void>;
+  remoteRemove(remoteName: string): Promise<void>;
+  remoteShow(): Promise<string[]>;
 }
 
+/**
+ * Create Git command helper
+ * @param workingDirectory a full path start with root directory, e.g: `/tmp/workspace/reponame`
+ */
 export async function createCommandHelper(
   workingDirectory: string,
 ): Promise<IGitCommandHelper> {
@@ -50,12 +72,14 @@ class GitCommandHelper implements IGitCommandHelper {
 
   private async execGit(
     args: string[],
+    reject = true,
   ): Promise<execa.ExecaReturnValue<string>> {
     const env = Object.assign({}, process.env, this.gitEnv);
 
     const options: execa.Options = {
       cwd: this.workingDirectory,
       env,
+      reject,
     };
 
     logger.verbose(`Exec git command: git ${args.join(' ')}`, this.context);
@@ -71,25 +95,151 @@ class GitCommandHelper implements IGitCommandHelper {
     return result;
   }
 
+  public async add(pattern: string): Promise<void> {
+    const result = await this.execGit(['add', pattern]);
+    const outputs = result.stdout.trim().split('\n');
+    if (outputs) {
+      outputs.forEach((log) => {
+        logger.verbose(`Git ${log}`, this.context);
+      });
+    }
+  }
+
+  public async addAll(): Promise<void> {
+    const result = await this.execGit(['add', '--all']);
+    const outputs = result.stdout.trim().split('\n');
+    if (outputs) {
+      outputs.forEach((log) => {
+        logger.verbose(`Git ${log}`, this.context);
+      });
+    }
+  }
+
+  public async branchCurrent(): Promise<string> {
+    const result = await this.execGit([
+      'branch',
+      '--no-color',
+      '--format="%(refname:short)"',
+      '--show-current',
+    ]);
+    return result.stdout.trim().replace('\n', '');
+  }
+
+  public async branchList(
+    location: 'local' | 'remote' | 'all' = 'local',
+  ): Promise<string[]> {
+    const args: string[] = [
+      'branch',
+      '--no-color',
+      '--format="%(refname:short)"',
+      '--list',
+    ];
+    if (location === 'remote') args.push('--remotes');
+    if (location === 'all') args.push('--all');
+    const result = await this.execGit(args);
+    return result.stdout.trim().split('\n');
+  }
+
+  public async checkout(branch: string, force?: boolean): Promise<void> {
+    const result = await this.execGit([
+      'checkout',
+      '--no-progress',
+      force ? '--force' : '',
+      branch,
+    ]);
+    logger.verbose(result.stdout, this.context);
+  }
+
+  public async clone(
+    repoUrl: string,
+    branch?: string,
+    depth?: number,
+  ): Promise<void> {
+    const args: string[] = ['clone', '--quiet'];
+    if (branch) args.push(`--branch=${branch}`);
+    if (depth && depth > 0) args.push(`--depth=${depth}`);
+    const result = await this.execGit([
+      ...args,
+      repoUrl,
+      this.workingDirectory,
+    ]);
+    logger.verbose(result.stdout, this.context);
+  }
+
+  public async commit(
+    message: string,
+    author?: { name: string; email: string },
+  ): Promise<void> {
+    const args: string[] = ['commit', `--message="${message}"`];
+    if (author) args.push(`--author="${author.name} <${author.email}>"`);
+    const result = await this.execGit(args);
+    logger.verbose(result.stdout, this.context);
+  }
+
   public async config(
     configKey: string,
     configValue: string,
     add?: boolean,
   ): Promise<void> {
     const args: string[] = ['config', '--local'];
-    if (add) {
-      args.push('--add');
-    }
+    if (add) args.push('--add');
     args.push(...[configKey, configValue]);
     await this.execGit(args);
   }
 
+  public async configExists(configKey: string): Promise<boolean> {
+    const pattern = escape(configKey);
+    const output = await this.execGit(
+      ['config', '--local', '--name-only', '--get-regexp', pattern],
+      false,
+    );
+    return output.exitCode === 0;
+  }
+
+  public async configUnset(configKey: string): Promise<boolean> {
+    const output = await this.execGit(
+      ['config', '--local', '--unset-all', configKey],
+      false,
+    );
+    return output.exitCode === 0;
+  }
+
+  public getWorkingDirectory(): string {
+    return this.workingDirectory;
+  }
+
   public async init(branchName?: string): Promise<void> {
     const args: string[] = ['init'];
-    if (branchName) {
-      args.push(`--initial-branch=${branchName}`);
-    }
+    if (branchName) args.push(`--initial-branch=${branchName}`);
     args.push(this.workingDirectory);
-    await this.execGit(args);
+    const result = await this.execGit(args);
+    logger.verbose(result.stdout, this.context);
+  }
+
+  public async push(
+    remoteName = 'origin',
+    branch = 'master',
+    force?: boolean,
+  ): Promise<void> {
+    const result = await this.execGit([
+      'push',
+      force ? '--force' : '',
+      remoteName,
+      `refs/heads/${branch}:refs/heads/${branch}`,
+    ]);
+    logger.verbose(result.stdout, this.context);
+  }
+
+  public async remoteAdd(remoteName: string, remoteUrl: string): Promise<void> {
+    await this.execGit(['remote', 'add', remoteName, remoteUrl]);
+  }
+
+  public async remoteRemove(remoteName: string): Promise<void> {
+    await this.execGit(['remote', 'remove', remoteName]);
+  }
+
+  public async remoteShow(): Promise<string[]> {
+    const result = await this.execGit(['remote', 'show']);
+    return result.stdout.trim().split('\n');
   }
 }

@@ -10,18 +10,23 @@ import {
 } from '../../types';
 
 export class GitHubService {
-  public static async getServerUrl(): Promise<URL> {
+  public static getServerUrl(): URL {
     return new URL('https://github.com');
   }
 
-  public static async getFetchUrl(
-    owner: string,
-    repo: string,
-  ): Promise<string> {
-    const serviceUrl = await this.getServerUrl();
+  public static getFetchUrl(owner: string, repo: string): string {
+    const serviceUrl = this.getServerUrl();
     const encodedOwner = encodeURIComponent(owner);
     const encodedRepo = encodeURIComponent(repo);
     return `${serviceUrl.origin}/${encodedOwner}/${encodedRepo}.git`;
+  }
+
+  public static getBasicCredential(token: string): string {
+    const basicCredential = Buffer.from(
+      `x-access-token:${token}`,
+      'utf8',
+    ).toString('base64');
+    return basicCredential;
   }
 
   constructor(private readonly tmpDir: string) {
