@@ -3,25 +3,16 @@ import { MetaWorker } from '@metaio/worker-model';
 import fs from 'fs';
 import fsp from 'fs/promises';
 import { copy } from 'fs-extra';
-import Git, { Repository } from 'nodegit';
 import os from 'os';
 import path from 'path';
 import yaml from 'yaml';
 
 import { logger } from '../logger';
-import {
-  BuildBasicInfoFromTemplateUrl,
-  BuildRemoteHttpUrlWithTokenReturn,
-  DownloadRepositoryArchiveReturn,
-  GitAuthor,
-  LogContext,
-  MixedTaskConfig,
-} from '../types';
+import { GitAuthor, LogContext, MixedTaskConfig } from '../types';
 import { createAuthHelper } from './helpers/auth';
 import { createCommandHelper, IGitCommandHelper } from './helpers/command';
 import { GiteeService } from './services/gitee';
 import { GitHubService } from './services/github';
-import { ZipArchiveService } from './zip';
 
 type SpecificFrameworkInfo = {
   themeDirName: string;
@@ -35,12 +26,12 @@ export class GitService {
     const {
       task: { taskWorkspace },
     } = this.taskConfig;
-    logger.info(`Task workspace is ${taskWorkspace}`, this.context);
+    logger.info(`Task workspace is ${taskWorkspace}.`, this.context);
 
     const baseDir = path.join(os.tmpdir(), taskWorkspace);
     fs.mkdirSync(baseDir, { recursive: true });
     logger.info(
-      `Git temporary directory is created, path: ${baseDir}`,
+      `Git temporary directory is created, path: ${baseDir}.`,
       this.context,
     );
 
@@ -54,88 +45,7 @@ export class GitService {
   private readonly baseDir: string;
   private readonly gitAuthor: GitAuthor;
 
-  private async buildRemoteGitUrlWithToken(
-    type: MetaWorker.Enums.GitServiceType,
-    token: string,
-    uname: string,
-    rname: string,
-  ): Promise<BuildRemoteHttpUrlWithTokenReturn> {
-    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      return await GitHubService.buildRemoteGitUrlWithToken(
-        token,
-        uname,
-        rname,
-      );
-    }
-    if (type === MetaWorker.Enums.GitServiceType.GITEE) {
-      return await GiteeService.buildRemoteGitUrlWithToken(token, uname, rname);
-    }
-    throw new Error(`Unsupport type ${type}`);
-  }
-
-  private async buildBasicInfoFromGitUrl(
-    type: MetaWorker.Enums.GitServiceType,
-    url: string,
-  ): Promise<BuildBasicInfoFromTemplateUrl> {
-    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      return await GitHubService.buildBasicInfoFromGitUrl(url);
-    }
-    if (type === MetaWorker.Enums.GitServiceType.GITEE) {
-      return await GiteeService.buildBasicInfoFromGitUrl(url);
-    }
-    throw new Error(`Unsupport type ${type}`);
-  }
-
-  private async downloadArchiveFromGitUrl(
-    type: MetaWorker.Enums.GitServiceType,
-    url: string,
-    branch?: string,
-    file?: string,
-  ): Promise<DownloadRepositoryArchiveReturn> {
-    const { owner, repo } = await this.buildBasicInfoFromGitUrl(type, url);
-
-    if (type === MetaWorker.Enums.GitServiceType.GITHUB) {
-      const github = new GitHubService(this.baseDir);
-      return await github.downloadRepositoryArchive(owner, repo, branch, file);
-    }
-    throw new Error(`Unsupport type ${type}`);
-  }
-
-  private async decompressRepositoryArchive(
-    archivePath: string,
-  ): Promise<string> {
-    const output = path.join(this.baseDir, 'temp');
-    await this.removeIfPathExists(output);
-
-    const zip = new ZipArchiveService();
-
-    return await zip.extractAllFiles(archivePath, output);
-  }
-
-  private async copyDecompressedFilesIntoRepo(
-    tPath: string,
-    rPath: string,
-    findStr?: string,
-  ): Promise<void> {
-    let _cPath = tPath.replace(path.extname(tPath), '');
-    logger.info(`Decompressed directory is ${_cPath}`, this.context);
-
-    if (findStr) {
-      const files = await fsp.readdir(_cPath, { withFileTypes: true });
-      const dirs = files
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-      const findDir = dirs.find((name) => name.includes(findStr));
-      if (findDir) _cPath = path.join(_cPath, findDir);
-    }
-
-    logger.info(
-      `Copy decompressed files from ${_cPath} to ${rPath}`,
-      this.context,
-    );
-    await copy(_cPath, rPath, { recursive: true, overwrite: true });
-  }
-
+  // #region Git operations
   private async getRemoteUrl(gitInfo: MetaWorker.Info.Git): Promise<string> {
     const { serviceType, username, reponame } = gitInfo;
     if (serviceType === MetaWorker.Enums.GitServiceType.GITHUB) {
@@ -144,7 +54,7 @@ export class GitService {
     if (serviceType === MetaWorker.Enums.GitServiceType.GITEE) {
       return GiteeService.getFetchUrl(username, reponame);
     }
-    throw new Error(`Unsupport type ${serviceType}`);
+    throw new Error(`Unsupport type ${serviceType}.`);
   }
 
   private async initializeRepository(
@@ -155,7 +65,7 @@ export class GitService {
     // Create repo dir
     await fsp.mkdir(repoPath, { recursive: true });
     logger.info(
-      `Initialize git repository to ${repoPath}, branch ${branchName}`,
+      `Initialize git repository to ${repoPath}, branch ${branchName}.`,
       this.context,
     );
     const git = await createCommandHelper(repoPath);
@@ -173,8 +83,20 @@ export class GitService {
         `Can not open git repository, path ${repoPath} not exists.`,
       );
     }
-    logger.info(`Open git repository from ${repoPath}`, this.context);
+    logger.info(`Open git repository from ${repoPath}.`, this.context);
     return await createCommandHelper(repoPath);
+  }
+
+  private async cloneRepository(
+    clonePath: string,
+    repoUrl: string,
+    branch?: string,
+    depth?: number,
+  ): Promise<IGitCommandHelper> {
+    const git = await createCommandHelper(clonePath);
+    logger.info(`Clone repository from ${repoUrl}.`, this.context);
+    await git.clone(repoUrl, branch, depth);
+    return git;
   }
 
   private async addAllChanges(git: IGitCommandHelper): Promise<void> {
@@ -193,26 +115,89 @@ export class GitService {
     gitInfo: MetaWorker.Info.Git,
     remote = 'origin',
   ): Promise<void> {
-    logger.info(`Lookup repository remote`, this.context);
+    logger.info(`Lookup repository remote.`, this.context);
     const remotes = await git.remoteShow();
     if (remotes.includes(remote)) {
-      logger.info(`Previous remote '${remote}' found, remove it`, this.context);
+      logger.info(
+        `Previous remote '${remote}' found, remove it.`,
+        this.context,
+      );
       await git.remoteRemove(remote);
     }
     const remoteUrl = await this.getRemoteUrl(gitInfo);
     logger.info(
-      `Add repository remote '${remote}', url: ${remoteUrl}`,
+      `Add repository remote '${remote}', url: ${remoteUrl}.`,
       this.context,
     );
     await git.remoteAdd(remote, remoteUrl);
   }
+  // #endregion Git operations
 
+  // #region File and folder operations
   private async removeIfPathExists(path: string): Promise<void> {
     const isExists = fs.existsSync(path);
     if (isExists) {
-      logger.info(`Path ${path} exists, remove it.`, this.context);
+      logger.info(`Remove file(s), path ${path}.`, this.context);
       fs.rmSync(path, { recursive: true });
     }
+  }
+
+  private async removeDotGitDirectory(findPath: string): Promise<void> {
+    const files = await fsp.readdir(findPath, { withFileTypes: true });
+    const findDir = files
+      .filter((dirent) => dirent.isDirectory())
+      .find((dirent) => dirent.name.includes('.git'));
+    if (findDir) {
+      logger.info(`Remove ${findDir.name} directory.`, this.context);
+      const gitDir = path.join(findPath, findDir.name);
+      await this.removeIfPathExists(gitDir);
+    }
+  }
+
+  private async cloneTemplateRepository(
+    template: MetaWorker.Info.Template,
+  ): Promise<string> {
+    const tempPath = path.join(this.baseDir, '.template');
+    await this.removeIfPathExists(tempPath);
+    logger.info(`Create template directory, path ${path}.`, this.context);
+    const { templateRepoUrl, templateBranchName } = template;
+    logger.info(
+      `Clone template repository from ${templateRepoUrl}.`,
+      this.context,
+    );
+    await this.cloneRepository(
+      tempPath,
+      templateRepoUrl,
+      templateBranchName,
+      1,
+    );
+    await this.removeDotGitDirectory(tempPath);
+    return tempPath;
+  }
+
+  private async cloneThemeRepository(
+    theme: MetaWorker.Info.Theme,
+  ): Promise<string> {
+    const tempPath = path.join(this.baseDir, '.theme');
+    await this.removeIfPathExists(tempPath);
+    logger.info(`Create theme directory, path ${path}.`, this.context);
+    const { themeRepo, themeBranch } = theme;
+    logger.info(`Clone theme repository from ${themeRepo}.`, this.context);
+    await this.cloneRepository(tempPath, themeRepo, themeBranch, 1);
+    await this.removeDotGitDirectory(tempPath);
+    return tempPath;
+  }
+
+  private async copyTemporaryFilesIntoRepo(
+    tempPath: string,
+    repoPath: string,
+  ): Promise<void> {
+    await this.removeDotGitDirectory(tempPath);
+    logger.info(
+      `Copy temporary files from ${tempPath} to ${repoPath}.`,
+      this.context,
+    );
+    await copy(tempPath, repoPath, { recursive: true, overwrite: true });
   }
 
   private async getSpecificFrameworkInfoByTemplateType(
@@ -225,7 +210,7 @@ export class GitService {
       };
     }
     throw new Error(
-      `getSpecificFrameworkInfoByTemplateType: Unsupported type ${type}`,
+      `getSpecificFrameworkInfoByTemplateType: Unsupported type ${type}.`,
     );
   }
 
@@ -247,7 +232,7 @@ export class GitService {
     const data = new Uint8Array(Buffer.from(yamlStr));
     await fsp.writeFile(filePath, data, { encoding: 'utf8' });
     logger.info(
-      `Successful create ${fileName} file, path: ${filePath}`,
+      `Successful create ${fileName} file, path: ${filePath}.`,
       this.context,
     );
   }
@@ -264,7 +249,7 @@ export class GitService {
     if (isExists) return;
     await fsp.writeFile(filePath, '\n');
     logger.info(
-      `Successful create .nojekyll file, path: ${filePath}`,
+      `Successful create .nojekyll file, path: ${filePath}.`,
       this.context,
     );
   }
@@ -278,68 +263,55 @@ export class GitService {
     const filePath = path.join(workDir, 'CNAME');
     const isExists = fs.existsSync(filePath);
     if (isExists) {
-      logger.info(`CNAME file already exists`, this.context);
+      logger.info(`CNAME file already exists.`, this.context);
       return;
     }
     await fsp.writeFile(filePath, `${content}\n`);
     logger.info(
-      `Successful create CNAME file, path: ${filePath}`,
+      `Successful create CNAME file, path: ${filePath}.`,
       this.context,
     );
   }
+  // #endregion File and folder operations
 
   public async createRepoFromTemplate(): Promise<IGitCommandHelper> {
     if (!isDeployTask(this.taskConfig))
-      throw new Error(`Task config is not for deploy`);
+      throw new Error(`Task config is not for deploy.`);
     const {
       git: { storage },
       template,
     } = this.taskConfig;
-    const { reponame, serviceType } = storage;
-
     const git = await this.initializeRepository(storage);
 
-    const { templateRepoUrl, templateBranchName } = template;
-    logger.info(
-      `Download template zip archive from ${templateRepoUrl}`,
-      this.context,
-    );
-    const _archive = await this.downloadArchiveFromGitUrl(
-      serviceType,
-      templateRepoUrl,
-      templateBranchName,
-    );
-    const { filePath, findStr } = _archive;
-    logger.info(`Decompress template archive ${filePath}`, this.context);
-    const _template = await this.decompressRepositoryArchive(filePath);
+    logger.info(`Clone template repository.`, this.context);
+    const templatePath = await this.cloneTemplateRepository(template);
 
-    const repoPath = path.join(this.baseDir, reponame);
-    await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
+    const repoPath = path.join(this.baseDir, storage.reponame);
+    await this.copyTemporaryFilesIntoRepo(templatePath, repoPath);
+    logger.info(`Create meta space config file.`, this.context);
     await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
 
     return git;
   }
 
-  async replaceRepoTemplate(): Promise<void> {
+  public async replaceRepoTemplate(): Promise<void> {
     if (!isDeployTask(this.taskConfig))
-      throw new Error(`Task config is not for deploy`);
+      throw new Error(`Task config is not for deploy.`);
 
     const {
       git: { storage },
       template,
     } = this.taskConfig;
-    const { serviceType, reponame } = storage;
-    const { templateRepoUrl, templateBranchName, templateType } = template;
-    const repoPath = path.join(this.baseDir, reponame);
+    const repoPath = path.join(this.baseDir, storage.reponame);
 
     // Backup source folder
     const _frameworkInfo = await this.getSpecificFrameworkInfoByTemplateType(
-      templateType,
+      template.templateType,
     );
     const sourceName = _frameworkInfo.sourceDirName;
     const sourcePath = path.join(repoPath, sourceName);
     const backupPath = path.join(this.baseDir, 'backup', sourceName);
-    logger.info(`Backup ${sourcePath} to ${backupPath}`, this.context);
+    logger.info(`Backup ${sourcePath} to ${backupPath}.`, this.context);
     await copy(sourcePath, backupPath, {
       recursive: true,
       overwrite: true,
@@ -350,34 +322,24 @@ export class GitService {
     files.forEach((name) => {
       if (name !== '.git') {
         const removePath = path.join(repoPath, name);
-        logger.info(`Remove path ${removePath}`, this.context);
+        logger.info(`Remove path ${removePath}.`, this.context);
         fs.rmSync(removePath, { recursive: true });
       }
     });
 
-    // Download new template
-    logger.info(
-      `Download template zip archive from ${templateRepoUrl}`,
-      this.context,
-    );
-    const _archive = await this.downloadArchiveFromGitUrl(
-      serviceType,
-      templateRepoUrl,
-      templateBranchName,
-    );
+    // Clone new template
+    logger.info(`Clone new template repository.`, this.context);
+    const templatePath = await this.cloneTemplateRepository(template);
 
-    // Decompress and copy files
-    const { filePath, findStr } = _archive;
-    logger.info(`Decompress template archive ${filePath}`, this.context);
-    const _template = await this.decompressRepositoryArchive(filePath);
-    await this.copyDecompressedFilesIntoRepo(_template, repoPath, findStr);
+    // Copy files
+    await this.copyTemporaryFilesIntoRepo(templatePath, repoPath);
 
     // Remove template source folder
     await this.removeIfPathExists(sourcePath);
 
     // Restore original source folder
     logger.info(
-      `Restore backup from ${backupPath} to ${sourcePath}`,
+      `Restore backup from ${backupPath} to ${sourcePath}.`,
       this.context,
     );
     await copy(backupPath, sourcePath, {
@@ -389,7 +351,7 @@ export class GitService {
     await this.createMetaSpaceConfigFile(this.taskConfig, repoPath);
   }
 
-  async copyThemeToRepo(): Promise<void> {
+  public async copyThemeToRepo(): Promise<void> {
     if (!isDeployTask(this.taskConfig)) {
       logger.info(`Task config is not for deploy, skip.`);
       return;
@@ -398,27 +360,14 @@ export class GitService {
       theme,
       git: { storage },
     } = this.taskConfig;
-    const { serviceType, reponame } = storage;
-    const { themeRepo, themeBranch, themeName, themeType, isPackage } = theme;
-
+    const { themeType, themeName, isPackage } = theme;
     if (isPackage) {
       logger.info(`This theme has npm package, skip.`);
       return;
     }
 
-    // Use download instead of Git clone cause `libgit2` not support clone depth
-    // see https://github.com/libgit2/libgit2/issues/3058
-    logger.info(`Download theme zip archive from ${themeRepo}`, this.context);
-    const _archive = await this.downloadArchiveFromGitUrl(
-      serviceType,
-      themeRepo,
-      themeBranch,
-      'theme.zip',
-    );
-
-    const { filePath, findStr } = _archive;
-    logger.info(`Decompress theme archive ${filePath}`, this.context);
-    const _theme = await this.decompressRepositoryArchive(filePath);
+    logger.info(`Clone theme repository.`, this.context);
+    const _theme = await this.cloneThemeRepository(theme);
 
     const _frameworkInfo = await this.getSpecificFrameworkInfoByTemplateType(
       themeType,
@@ -427,66 +376,64 @@ export class GitService {
 
     const _themePath = path.join(
       this.baseDir,
-      reponame,
+      storage.reponame,
       _themeDirName,
       themeName,
     );
-    logger.info(`Create theme directory ${_themePath}`, this.context);
+    logger.info(`Create theme directory ${_themePath}.`, this.context);
     await fsp.mkdir(_themePath, { recursive: true });
 
-    logger.info(`Copy theme files to ${_themePath}`, this.context);
-    await this.copyDecompressedFilesIntoRepo(_theme, _themePath, findStr);
+    logger.info(`Copy theme files to ${_themePath}.`, this.context);
+    await this.copyTemporaryFilesIntoRepo(_theme, _themePath);
   }
 
-  async cloneAndCheckoutFromRemote(branch?: string): Promise<Repository> {
-    const {
-      git: { storage },
-    } = this.taskConfig;
-    const { serviceType, token, username, reponame, branchName } = storage;
-    const repoPath = path.join(this.baseDir, reponame);
-    await this.removeIfPathExists(repoPath);
-    const _remoteUrls = await this.buildRemoteGitUrlWithToken(
-      serviceType,
-      token,
-      username,
-      reponame,
-    );
-    const { remoteUrl } = _remoteUrls;
-    logger.info(`Clone repo ${reponame} to ${repoPath}`, this.context);
-    if (!branch) branch = branchName;
-    const _localRepo = await Git.Clone.clone(remoteUrl, repoPath, {
-      checkoutBranch: branch,
-    });
-    return _localRepo;
-  }
-
-  async openRepoFromLocal(branch?: string): Promise<Repository> {
+  public async cloneAndCheckoutFromRemote(
+    branch?: string,
+  ): Promise<IGitCommandHelper> {
     const {
       git: { storage },
     } = this.taskConfig;
     const { reponame, branchName } = storage;
     const repoPath = path.join(this.baseDir, reponame);
-    logger.info(`Open repo ${reponame} from ${repoPath}`, this.context);
-    const _localRepo = await Git.Repository.open(repoPath);
-    const _branch = await _localRepo.getCurrentBranch();
-    const _branchName = _branch.shorthand();
-    logger.info(`Current branch is ${_branchName}`, this.context);
+    await this.removeIfPathExists(repoPath);
+
+    const remoteUrl = await this.getRemoteUrl(storage);
+    logger.info(`Clone repository from ${remoteUrl}.`, this.context);
+
     if (!branch) branch = branchName;
-    if (branch !== _branchName) {
-      logger.info(`Checkout branch ${branch}`, this.context);
-      await _localRepo.checkoutBranch(branch);
-      logger.info(`Successful checkout branch ${branch}`, this.context);
+    const git = await this.cloneRepository(repoPath, remoteUrl, branch);
+
+    return git;
+  }
+
+  public async openRepoFromLocal(branch?: string): Promise<IGitCommandHelper> {
+    const {
+      git: { storage },
+    } = this.taskConfig;
+    const repoPath = path.join(this.baseDir, storage.reponame);
+    logger.info(`Open local repository from ${repoPath}.`, this.context);
+    const git = await this.openRepository(storage);
+
+    if (!branch) branch = storage.branchName;
+
+    const _currbranch = await git.branchCurrent();
+    logger.info(`Current branch is ${_currbranch}.`, this.context);
+
+    if (branch !== _currbranch) {
+      logger.info(`Checkout branch ${branch}.`, this.context);
+      await git.checkout(branch);
     }
-    return _localRepo;
+
+    return git;
   }
 
   public async commitAllChangesWithMessage(
     git: IGitCommandHelper,
     msg: string,
   ): Promise<void> {
+    logger.info(`Commit all changes with message ${msg}.`, this.context);
     await this.addAllChanges(git);
     await this.commitWithMessage(git, msg);
-    logger.info(`Commit all changes with message ${msg}`, this.context);
   }
 
   public async pushLocalRepoToRemote(
@@ -495,26 +442,25 @@ export class GitService {
     branch?: string,
     force?: boolean,
   ): Promise<void> {
+    logger.info(`Config repository auth info.`, this.context);
     const auth = createAuthHelper(git, info);
     await auth.configureAuth();
-
+    logger.info(`Set repository remote 'origin'.`, this.context);
     await this.setRepositoryRemote(git, info);
-
     const { branchName } = info;
     if (!branch) branch = branchName;
-
     logger.info(
-      `Pushing local repository to remote 'origin', branch ${branch}`,
+      `Pushing local repository to remote 'origin', branch ${branch}.`,
       this.context,
     );
     await git.push('origin', branch, force);
-
+    logger.info(`Remove repository auth info.`, this.context);
     await auth.removeAuth();
   }
 
   public async publishSiteToGitHubPages(): Promise<void> {
     if (!isPublishTask(this.taskConfig))
-      throw new Error('Task config is not for publish site');
+      throw new Error('Task config is not for publish site.');
     const {
       publish,
       site,
@@ -538,7 +484,8 @@ export class GitService {
 
   public async generateMetaSpaceConfig(): Promise<void> {
     if (!isDeployTask(this.taskConfig))
-      throw new Error(`Task config is not for deploy`);
+      throw new Error(`Task config is not for deploy.`);
+    logger.info(`Generate meta space config file.`, this.context);
     const {
       git: { storage },
     } = this.taskConfig;
