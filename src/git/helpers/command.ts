@@ -143,12 +143,9 @@ class GitCommandHelper implements IGitCommandHelper {
   }
 
   public async checkout(branch: string, force?: boolean): Promise<void> {
-    const result = await this.execGit([
-      'checkout',
-      '--no-progress',
-      force ? '--force' : '',
-      branch,
-    ]);
+    const args: string[] = ['checkout', '--no-progress'];
+    if (force) args.push('--force');
+    const result = await this.execGit([...args, branch]);
     logger.verbose(result.stdout, this.context);
   }
 
@@ -223,9 +220,10 @@ class GitCommandHelper implements IGitCommandHelper {
     branch = 'master',
     force?: boolean,
   ): Promise<void> {
+    const args: string[] = ['push'];
+    if (force) args.push('--force');
     const result = await this.execGit([
-      'push',
-      force ? '--force' : '',
+      ...args,
       remoteName,
       `refs/heads/${branch}:refs/heads/${branch}`,
     ]);
