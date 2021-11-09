@@ -137,8 +137,9 @@ class GitCommandHelper implements IGitCommandHelper {
     ];
     if (location === 'remote') args.push('--remotes');
     if (location === 'all') args.push('--all');
-    const result = await this.execGit(args);
-    return result.stdout.trim().split('\n');
+    const output = await this.execGit(args);
+    const result = output.stdout.trim().replace(/"/g, '').split('\n');
+    return result;
   }
 
   public async checkout(branch: string, force?: boolean): Promise<void> {
