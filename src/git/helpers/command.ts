@@ -55,7 +55,7 @@ class GitCommandHelper implements IGitCommandHelper {
     workingDirectory: string,
   ): Promise<void> {
     this.workingDirectory = workingDirectory;
-    logger.debug(
+    logger.verbose(
       `Git working directory is ${this.workingDirectory}`,
       this.context,
     );
@@ -63,10 +63,11 @@ class GitCommandHelper implements IGitCommandHelper {
     logger.verbose('Getting git version', this.context);
     const gitOutput = await this.execGit(['--version']);
     const gitVersion = gitOutput.stdout.trim().match(/\d+\.\d+(\.\d+)?/);
-    if (gitVersion) logger.debug(`Git version: ${gitVersion[0]}`, this.context);
+    if (Array.isArray(gitVersion))
+      logger.verbose(`Git version: ${gitVersion[0]}`, this.context);
 
-    const gitHttpUserAgent = `git/${gitVersion} (meta-cms-worker-git)`;
-    logger.debug(`Set git useragent to: ${gitHttpUserAgent}`, this.context);
+    const gitHttpUserAgent = `git/${gitVersion[0]} (meta-cms-worker-git)`;
+    logger.verbose(`Set git useragent to: ${gitHttpUserAgent}`, this.context);
     this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
   }
 
