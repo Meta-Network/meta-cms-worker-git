@@ -7,8 +7,8 @@ import { LogContext } from '../../types';
 import { escape } from '../utils';
 
 export interface IGitCommandHelper {
-  add(pattern: string): Promise<void>;
-  addAll(): Promise<void>;
+  add(pattern: string): Promise<string[]>;
+  addAll(): Promise<string[]>;
   branchCurrent(): Promise<string>;
   branchList(location?: 'local' | 'remote' | 'all'): Promise<string[]>;
   checkout(branch: string, force?: boolean): Promise<void>;
@@ -104,24 +104,16 @@ class GitCommandHelper implements IGitCommandHelper {
     return result;
   }
 
-  public async add(pattern: string): Promise<void> {
-    const result = await this.execGit(['add', pattern]);
-    const outputs = result.stdout.trim().split('\n');
-    if (outputs) {
-      outputs.forEach((log) => {
-        logger.verbose(`Git ${log}`, this.context);
-      });
-    }
+  public async add(pattern: string): Promise<string[]> {
+    const result = await this.execGit(['add', '--verbose', pattern]);
+    logger.verbose(result.stdout, this.context);
+    return result.stdout.trim().split('\n');
   }
 
-  public async addAll(): Promise<void> {
-    const result = await this.execGit(['add', '--all']);
-    const outputs = result.stdout.trim().split('\n');
-    if (outputs) {
-      outputs.forEach((log) => {
-        logger.verbose(`Git ${log}`, this.context);
-      });
-    }
+  public async addAll(): Promise<string[]> {
+    const result = await this.execGit(['add', '--verbose', '--all']);
+    logger.verbose(result.stdout, this.context);
+    return result.stdout.trim().split('\n');
   }
 
   public async branchCurrent(): Promise<string> {
