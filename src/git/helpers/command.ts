@@ -1,5 +1,6 @@
 import execa from 'execa';
 import process from 'process';
+import { gt } from 'semver';
 
 import { logger } from '../../logger';
 import { LogContext } from '../../types';
@@ -44,6 +45,7 @@ class GitCommandHelper implements IGitCommandHelper {
     };
   }
 
+  private readonly minimumGitVersion = '2.28.0';
   private readonly context: LogContext;
   private gitEnv = {
     GIT_TERMINAL_PROMPT: '0', // Disable git prompt
@@ -62,11 +64,17 @@ class GitCommandHelper implements IGitCommandHelper {
 
     logger.verbose('Getting git version', this.context);
     const gitOutput = await this.execGit(['--version']);
-    const gitVersion = gitOutput.stdout.trim().match(/\d+\.\d+(\.\d+)?/);
-    if (Array.isArray(gitVersion))
-      logger.verbose(`Git version: ${gitVersion[0]}`, this.context);
+    const gitVersionMatch = gitOutput.stdout.trim().match(/\d+\.\d+(\.\d+)?/);
+    if (Array.isArray(gitVersionMatch)) {
+      logger.verbose(`Git version: ${gitVersionMatch[0]}`, this.context);
+      if (!gt(gitVersionMatch[0], this.minimumGitVersion)) {
+        throw new Error(
+          `Minimum Git version is ${this.minimumGitVersion}, current is ${gitVersionMatch[0]}`,
+        );
+      }
+    }
 
-    const gitHttpUserAgent = `git/${gitVersion[0]} (meta-cms-worker-git)`;
+    const gitHttpUserAgent = `git/${gitVersionMatch[0]} (meta-cms-worker-git)`;
     logger.verbose(`Set git useragent to: ${gitHttpUserAgent}`, this.context);
     this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
   }
@@ -211,7 +219,7 @@ class GitCommandHelper implements IGitCommandHelper {
 
   public async init(branchName?: string): Promise<void> {
     const args: string[] = ['init'];
-    if (branchName) args.push(`--initial-branch=${branchName}`);
+    if (branchName) args.push(`--initial-branch="${branchName}"`);
     args.push(this.workingDirectory);
     const result = await this.execGit(args);
     logger.verbose(result.stdout, this.context);
