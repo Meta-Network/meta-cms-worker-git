@@ -219,7 +219,7 @@ class GitCommandHelper implements IGitCommandHelper {
 
   public async init(branchName?: string): Promise<void> {
     const args: string[] = ['init'];
-    if (branchName) args.push(`--initial-branch="${branchName}"`);
+    if (branchName) args.push(`--initial-branch=${branchName}`);
     args.push(this.workingDirectory);
     const result = await this.execGit(args);
     logger.verbose(result.stdout, this.context);
