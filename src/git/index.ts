@@ -172,12 +172,13 @@ export class GitService {
     repoPath: string,
   ): Promise<void> {
     const fileName = 'meta-space-config.yml';
-    const { user, site, theme, gateway } = config;
+    const { user, site, theme, gateway, metadata } = config;
     const metaSpaceConfig: MetaWorker.Configs.MetaSpaceConfig = {
       user,
       site,
       theme,
       gateway,
+      metadata,
     };
     const filePath = path.join(repoPath, fileName);
     const yamlStr = yaml.stringify(metaSpaceConfig);
