@@ -1,4 +1,4 @@
-import cron from 'cron';
+import { CronJob } from 'cron';
 import timer from 'timers';
 
 import { getBackendService } from './api';
@@ -16,7 +16,7 @@ async function bootstrap(): Promise<void> {
     }, 3000)
     .unref();
 
-  const healthCheck = new cron.CronJob('*/10 * * * * *', async () => {
+  const healthCheck = new CronJob('*/10 * * * * *', async () => {
     logger.info('Health check');
     await http.reportWorkerTaskHealthStatusToBackend();
   });
