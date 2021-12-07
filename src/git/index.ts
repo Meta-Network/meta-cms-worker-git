@@ -159,7 +159,8 @@ export class GitService {
   ): Promise<string> {
     const tempPath = path.join(this.baseDir, '.template');
     await this.removeIfPathExists(tempPath);
-    logger.info(`Create template directory, path ${path}.`, this.context);
+    logger.info(`Create template directory, path ${tempPath}.`, this.context);
+    await fsp.mkdir(tempPath, { recursive: true });
     const { templateRepoUrl, templateBranchName } = template;
     logger.info(
       `Clone template repository from ${templateRepoUrl}.`,
@@ -180,7 +181,8 @@ export class GitService {
   ): Promise<string> {
     const tempPath = path.join(this.baseDir, '.theme');
     await this.removeIfPathExists(tempPath);
-    logger.info(`Create theme directory, path ${path}.`, this.context);
+    logger.info(`Create theme directory, path ${tempPath}.`, this.context);
+    await fsp.mkdir(tempPath, { recursive: true });
     const { themeRepo, themeBranch } = theme;
     logger.info(`Clone theme repository from ${themeRepo}.`, this.context);
     await this.cloneRepository(tempPath, themeRepo, themeBranch, 1);
@@ -396,6 +398,8 @@ export class GitService {
     const { reponame, branchName } = storage;
     const repoPath = path.join(this.baseDir, reponame);
     await this.removeIfPathExists(repoPath);
+    logger.info(`Create repository directory, path ${repoPath}.`, this.context);
+    await fsp.mkdir(repoPath, { recursive: true });
 
     const remoteUrl = await this.getRemoteUrl(storage);
     logger.info(`Clone repository from ${remoteUrl}.`, this.context);
