@@ -49,6 +49,10 @@ class GitCommandHelper implements IGitCommandHelper {
   private readonly context: LogContext;
   private gitEnv = {
     GIT_TERMINAL_PROMPT: '0', // Disable git prompt
+    GIT_AUTHOR_NAME: '',
+    GIT_AUTHOR_EMAIL: '',
+    GIT_COMMITTER_NAME: '',
+    GIT_COMMITTER_EMAIL: '',
     GCM_INTERACTIVE: 'Never', // Disable prompting for git credential manager
   };
   private workingDirectory = '';
@@ -170,7 +174,16 @@ class GitCommandHelper implements IGitCommandHelper {
     author?: { name: string; email: string },
   ): Promise<void> {
     const args: string[] = ['commit', `--message="${message}"`];
-    if (author) args.push(`--author="${author.name} <${author.email}>"`);
+    if (author) {
+      args.push(`--author="${author.name} <${author.email}>"`);
+      this.gitEnv = {
+        ...this.gitEnv,
+        GIT_AUTHOR_NAME: author.name,
+        GIT_AUTHOR_EMAIL: author.email,
+        GIT_COMMITTER_NAME: author.name,
+        GIT_COMMITTER_EMAIL: author.email,
+      };
+    }
     const result = await this.execGit(args);
     logger.verbose(result.stdout, this.context);
   }
