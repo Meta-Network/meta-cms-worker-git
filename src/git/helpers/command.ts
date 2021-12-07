@@ -173,9 +173,9 @@ class GitCommandHelper implements IGitCommandHelper {
     message: string,
     author?: { name: string; email: string },
   ): Promise<void> {
-    const args: string[] = ['commit', `--message="${message}"`];
+    const args: string[] = ['commit', `--message=${message}`];
     if (author) {
-      args.push(`--author="${author.name} <${author.email}>"`);
+      args.push(`--author=${author.name} <${author.email}>`);
       this.gitEnv = {
         ...this.gitEnv,
         GIT_AUTHOR_NAME: author.name,
