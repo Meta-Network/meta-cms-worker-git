@@ -1,4 +1,4 @@
-import { execa, ExecaReturnValue, Options } from 'execa';
+import execa from 'execa';
 import process from 'process';
 import { gt } from 'semver';
 
@@ -82,10 +82,10 @@ class GitCommandHelper implements IGitCommandHelper {
   private async execGit(
     args: string[],
     reject = true,
-  ): Promise<ExecaReturnValue<string>> {
+  ): Promise<execa.ExecaReturnValue<string>> {
     const env = Object.assign({}, process.env, this.gitEnv);
 
-    const options: Options = {
+    const options: execa.Options = {
       cwd: this.workingDirectory,
       env,
       reject,
