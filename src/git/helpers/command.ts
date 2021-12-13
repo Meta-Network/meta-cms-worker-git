@@ -113,13 +113,13 @@ class GitCommandHelper implements IGitCommandHelper {
 
   public async add(pattern: string): Promise<string[]> {
     const result = await this.execGit(['add', '--verbose', pattern]);
-    logger.verbose(result.stdout, this.context);
+    logger.verbose(`Git add output: \n${result.stdout}`, this.context);
     return result.stdout.trim().split('\n');
   }
 
   public async addAll(): Promise<string[]> {
     const result = await this.execGit(['add', '--verbose', '--all']);
-    logger.verbose(result.stdout, this.context);
+    logger.verbose(`Git add output: \n${result.stdout}`, this.context);
     return result.stdout.trim().split('\n');
   }
 
@@ -193,7 +193,7 @@ class GitCommandHelper implements IGitCommandHelper {
       };
     }
     const result = await this.execGit(args);
-    logger.verbose(result.stdout, this.context);
+    logger.verbose(`Git commit output: \n${result.stdout}`, this.context);
   }
 
   public async config(
@@ -243,8 +243,7 @@ class GitCommandHelper implements IGitCommandHelper {
     for (const arg of refSpec) {
       args.push(arg);
     }
-    const result = await this.execGit(args);
-    logger.verbose(result.stdout, this.context);
+    await this.execGit(args);
   }
 
   public getWorkingDirectory(): string {
@@ -266,12 +265,11 @@ class GitCommandHelper implements IGitCommandHelper {
   ): Promise<void> {
     const args: string[] = ['push'];
     if (force) args.push('--force');
-    const result = await this.execGit([
+    await this.execGit([
       ...args,
       remoteName,
       `refs/heads/${branch}:refs/heads/${branch}`,
     ]);
-    logger.verbose(result.stdout, this.context);
   }
 
   public async remoteAdd(remoteName: string, remoteUrl: string): Promise<void> {
