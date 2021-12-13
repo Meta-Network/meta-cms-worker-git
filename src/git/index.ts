@@ -99,6 +99,33 @@ export class GitService {
     return git;
   }
 
+  private async fetchRepository(
+    gitInfo: MetaWorker.Info.Git,
+    branch: string,
+  ): Promise<IGitCommandHelper> {
+    const { reponame } = gitInfo;
+    const repoPath = path.join(this.baseDir, reponame);
+    await this.removeIfPathExists(repoPath);
+    logger.info(`Create repository directory, path ${repoPath}.`, this.context);
+    await fsp.mkdir(repoPath, { recursive: true });
+
+    const git = await createCommandHelper(repoPath);
+    await git.init();
+    await this.setRepositoryRemote(git, gitInfo);
+
+    logger.info(`Config repository auth info.`, this.context);
+    const auth = createAuthHelper(git, gitInfo);
+    await auth.configureAuth();
+
+    logger.info(`Fetch branch ${branch}.`, this.context);
+    await git.fetch([`+refs/heads/${branch}:refs/remotes/origin/${branch}`]);
+
+    logger.info(`Remove repository auth info.`, this.context);
+    await auth.removeAuth();
+
+    return git;
+  }
+
   private async addAllChanges(git: IGitCommandHelper): Promise<void> {
     await git.addAll();
   }
@@ -395,17 +422,13 @@ export class GitService {
     const {
       git: { storage },
     } = this.taskConfig;
-    const { reponame, branchName } = storage;
-    const repoPath = path.join(this.baseDir, reponame);
-    await this.removeIfPathExists(repoPath);
-    logger.info(`Create repository directory, path ${repoPath}.`, this.context);
-    await fsp.mkdir(repoPath, { recursive: true });
-
-    const remoteUrl = await this.getRemoteUrl(storage);
-    logger.info(`Clone repository from ${remoteUrl}.`, this.context);
-
+    const { branchName } = storage;
     if (!branch) branch = branchName;
-    const git = await this.cloneRepository(repoPath, remoteUrl, branch);
+
+    const git = await this.fetchRepository(storage, branch);
+
+    logger.info(`Checkout branch ${branch}.`, this.context);
+    await git.checkout(branch, true);
 
     return git;
   }

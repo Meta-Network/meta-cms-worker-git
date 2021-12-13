@@ -1,4 +1,6 @@
 import execa from 'execa';
+import fs from 'fs';
+import path from 'path';
 import process from 'process';
 import { gt } from 'semver';
 
@@ -11,7 +13,7 @@ export interface IGitCommandHelper {
   addAll(): Promise<string[]>;
   branchCurrent(): Promise<string>;
   branchList(location?: 'local' | 'remote' | 'all'): Promise<string[]>;
-  checkout(branch: string, force?: boolean): Promise<void>;
+  checkout(branch: string, isNew?: boolean, force?: boolean): Promise<void>;
   clone(repoUrl: string, branch?: string, depth?: number): Promise<void>;
   commit(
     message: string,
@@ -20,6 +22,7 @@ export interface IGitCommandHelper {
   config(configKey: string, configValue: string, add?: boolean): Promise<void>;
   configExists(configKey: string): Promise<boolean>;
   configUnset(configKey: string): Promise<boolean>;
+  fetch(refSpec: string[], depth?: number): Promise<void>;
   getWorkingDirectory(): string;
   init(branchName?: string): Promise<void>;
   push(remoteName?: string, branch?: string, force?: boolean): Promise<void>;
@@ -146,8 +149,13 @@ class GitCommandHelper implements IGitCommandHelper {
     return result;
   }
 
-  public async checkout(branch: string, force?: boolean): Promise<void> {
-    const args: string[] = ['checkout', '--no-progress'];
+  public async checkout(
+    branch: string,
+    isNew?: boolean,
+    force?: boolean,
+  ): Promise<void> {
+    const args: string[] = ['checkout', '--progress'];
+    if (isNew) args.push('-b');
     if (force) args.push('--force');
     const result = await this.execGit([...args, branch]);
     logger.verbose(result.stdout, this.context);
@@ -158,7 +166,7 @@ class GitCommandHelper implements IGitCommandHelper {
     branch?: string,
     depth?: number,
   ): Promise<void> {
-    const args: string[] = ['clone', '--quiet'];
+    const args: string[] = ['clone', '--progress'];
     if (branch) args.push(`--branch=${branch}`);
     if (depth && depth > 0) args.push(`--depth=${depth}`);
     const result = await this.execGit([
@@ -214,6 +222,29 @@ class GitCommandHelper implements IGitCommandHelper {
       false,
     );
     return output.exitCode === 0;
+  }
+
+  public async fetch(refSpec: string[], depth?: number): Promise<void> {
+    const args: string[] = [
+      'fetch',
+      '--no-tags',
+      '--no-recurse-submodules',
+      '--prune',
+      '--progress',
+    ];
+    if (depth && depth > 0) {
+      args.push(`--depth=${depth}`);
+    } else {
+      const shallowPath = path.join(this.workingDirectory, '.git', 'shallow');
+      const shallow = fs.existsSync(shallowPath);
+      if (shallow) args.push('--unshallow');
+    }
+    args.push('origin');
+    for (const arg of refSpec) {
+      args.push(arg);
+    }
+    const result = await this.execGit(args);
+    logger.verbose(result.stdout, this.context);
   }
 
   public getWorkingDirectory(): string {
