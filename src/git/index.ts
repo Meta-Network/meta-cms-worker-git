@@ -428,7 +428,7 @@ export class GitService {
     const git = await this.fetchRepository(storage, branch);
 
     logger.info(`Checkout branch ${branch}.`, this.context);
-    await git.checkout(branch, true);
+    await git.checkout(branch);
 
     return git;
   }
