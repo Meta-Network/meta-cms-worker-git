@@ -133,8 +133,9 @@ export class GitService {
   private async commitWithMessage(
     git: IGitCommandHelper,
     msg: string,
+    empty?: boolean,
   ): Promise<void> {
-    await git.commit(msg, this.gitAuthor);
+    await git.commit(msg, this.gitAuthor, empty);
   }
 
   private async setRepositoryRemote(
@@ -457,10 +458,11 @@ export class GitService {
   public async commitAllChangesWithMessage(
     git: IGitCommandHelper,
     msg: string,
+    empty?: boolean,
   ): Promise<void> {
     logger.info(`Commit all changes with message ${msg}.`, this.context);
     await this.addAllChanges(git);
-    await this.commitWithMessage(git, msg);
+    await this.commitWithMessage(git, msg, empty);
   }
 
   public async pushLocalRepoToRemote(

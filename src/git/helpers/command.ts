@@ -18,6 +18,7 @@ export interface IGitCommandHelper {
   commit(
     message: string,
     author?: { name: string; email: string },
+    allowEmpty?: boolean,
   ): Promise<void>;
   config(configKey: string, configValue: string, add?: boolean): Promise<void>;
   configExists(configKey: string): Promise<boolean>;
@@ -180,6 +181,7 @@ class GitCommandHelper implements IGitCommandHelper {
   public async commit(
     message: string,
     author?: { name: string; email: string },
+    allowEmpty = false,
   ): Promise<void> {
     const args: string[] = ['commit', `--message=${message}`];
     if (author) {
@@ -192,6 +194,7 @@ class GitCommandHelper implements IGitCommandHelper {
         GIT_COMMITTER_EMAIL: author.email,
       };
     }
+    if (allowEmpty) args.push('--allow-empty');
     const result = await this.execGit(args);
     logger.verbose(`Git commit output: \n${result.stdout}`, this.context);
   }
