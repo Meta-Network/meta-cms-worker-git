@@ -12,7 +12,7 @@ const getLogger = (): LoggerService => {
   if (!lokiUrl) throw Error('Can not find WORKER_LOKI_URL env');
   const _backendUrl = config.get<string>('WORKER_BACKEND_URL');
   if (!_backendUrl) throw Error('Can not find WORKER_BACKEND_URL env');
-  const backendUrl = `${_backendUrl}/task/hexo`;
+  const backendUrl = `${_backendUrl}/task/git`;
 
   const options: LoggerServiceOptions = {
     appName,
