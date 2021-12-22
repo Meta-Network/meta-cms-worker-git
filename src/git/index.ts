@@ -113,14 +113,14 @@ export class GitService {
     await git.init();
     await this.setRepositoryRemote(git, gitInfo);
 
-    logger.info(`Config repository auth info.`, this.context);
+    logger.verbose(`Config repository auth info.`, this.context);
     const auth = createAuthHelper(git, gitInfo);
     await auth.configureAuth();
 
     logger.info(`Fetch branch ${branch}.`, this.context);
     await git.fetch([`+refs/heads/${branch}:refs/remotes/origin/${branch}`]);
 
-    logger.info(`Remove repository auth info.`, this.context);
+    logger.verbose(`Remove repository auth info.`, this.context);
     await auth.removeAuth();
 
     return git;
@@ -146,7 +146,7 @@ export class GitService {
     logger.info(`Lookup repository remote.`, this.context);
     const remotes = await git.remoteShow();
     if (remotes.includes(remote)) {
-      logger.info(
+      logger.verbose(
         `Previous remote '${remote}' found, remove it.`,
         this.context,
       );
@@ -165,7 +165,7 @@ export class GitService {
   private async removeIfPathExists(path: string): Promise<void> {
     const isExists = fs.existsSync(path);
     if (isExists) {
-      logger.info(`Remove file(s), path ${path}.`, this.context);
+      logger.verbose(`Remove file(s), path ${path}.`, this.context);
       fs.rmSync(path, { recursive: true });
     }
   }
@@ -176,7 +176,7 @@ export class GitService {
       .filter((dirent) => dirent.isDirectory())
       .find((dirent) => dirent.name.includes('.git'));
     if (findDir) {
-      logger.info(`Remove ${findDir.name} directory.`, this.context);
+      logger.verbose(`Remove ${findDir.name} directory.`, this.context);
       const gitDir = path.join(findPath, findDir.name);
       await this.removeIfPathExists(gitDir);
     }
@@ -187,7 +187,10 @@ export class GitService {
   ): Promise<string> {
     const tempPath = path.join(this.baseDir, '.template');
     await this.removeIfPathExists(tempPath);
-    logger.info(`Create template directory, path ${tempPath}.`, this.context);
+    logger.verbose(
+      `Create template directory, path ${tempPath}.`,
+      this.context,
+    );
     await fsp.mkdir(tempPath, { recursive: true });
     const { templateRepoUrl, templateBranchName } = template;
     logger.info(
@@ -209,7 +212,7 @@ export class GitService {
   ): Promise<string> {
     const tempPath = path.join(this.baseDir, '.theme');
     await this.removeIfPathExists(tempPath);
-    logger.info(`Create theme directory, path ${tempPath}.`, this.context);
+    logger.verbose(`Create theme directory, path ${tempPath}.`, this.context);
     await fsp.mkdir(tempPath, { recursive: true });
     const { themeRepo, themeBranch } = theme;
     logger.info(`Clone theme repository from ${themeRepo}.`, this.context);
@@ -293,7 +296,7 @@ export class GitService {
     const filePath = path.join(workDir, 'CNAME');
     const isExists = fs.existsSync(filePath);
     if (isExists) {
-      logger.info(`CNAME file already exists.`, this.context);
+      logger.verbose(`CNAME file already exists.`, this.context);
       return;
     }
     await fsp.writeFile(filePath, `${content}\n`);
@@ -352,7 +355,7 @@ export class GitService {
     files.forEach((name) => {
       if (name !== '.git') {
         const removePath = path.join(repoPath, name);
-        logger.info(`Remove path ${removePath}.`, this.context);
+        logger.verbose(`Remove path ${removePath}.`, this.context);
         fs.rmSync(removePath, { recursive: true });
       }
     });
@@ -410,7 +413,7 @@ export class GitService {
       _themeDirName,
       themeName,
     );
-    logger.info(`Create theme directory ${_themePath}.`, this.context);
+    logger.verbose(`Create theme directory ${_themePath}.`, this.context);
     await fsp.mkdir(_themePath, { recursive: true });
 
     logger.info(`Copy theme files to ${_themePath}.`, this.context);
@@ -471,7 +474,7 @@ export class GitService {
     branch?: string,
     force?: boolean,
   ): Promise<void> {
-    logger.info(`Config repository auth info.`, this.context);
+    logger.verbose(`Config repository auth info.`, this.context);
     const auth = createAuthHelper(git, info);
     await auth.configureAuth();
     logger.info(`Set repository remote 'origin'.`, this.context);
@@ -483,7 +486,7 @@ export class GitService {
       this.context,
     );
     await git.push('origin', branch, force);
-    logger.info(`Remove repository auth info.`, this.context);
+    logger.verbose(`Remove repository auth info.`, this.context);
     await auth.removeAuth();
   }
 

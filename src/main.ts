@@ -17,7 +17,6 @@ async function bootstrap(): Promise<void> {
     .unref();
 
   const healthCheck = new CronJob('*/10 * * * * *', async () => {
-    logger.info('Health check');
     await http.reportWorkerTaskHealthStatusToBackend();
   });
 
