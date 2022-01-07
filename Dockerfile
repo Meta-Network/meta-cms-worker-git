@@ -10,4 +10,4 @@ FROM ghcr.io/biscuittin/node:14-impish
 WORKDIR /opt/MetaNetwork/Worker
 COPY --from=builder /opt/MetaNetwork/Worker/dist ./dist
 COPY --from=builder /opt/MetaNetwork/Worker/node_modules ./node_modules
-CMD ["--enable-source-maps","dist/main.js"]
+CMD ["--enable-source-maps","--prof","dist/main.js"]
